@@ -3,10 +3,23 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <title>NL Players — Photo Sphere</title>
+    <title>NL Players — Free The Map (Aura + Fullscreen)</title>
+    <link rel="stylesheet" href="src/style.css">
+
 </head>
+
 <body>
-<div class="topTitle">Free the Map</div>
+<!-- Aura -->
+<div class="aura" id="aura">
+    <div class="blob red" id="bRed"></div>
+    <div class="blob white" id="bWhite"></div>
+    <div class="blob blue" id="bBlue"></div>
+    <div class="blob neutral" id="bNeutral"></div>
+</div>
+<div class="noise"></div>
+
+<!-- Three.js -->
+<div class="topTitle">JOEP • IVY • FAYAAZ</div>
 <div id="app"></div>
 
 <div class="bottomNav">
@@ -15,17 +28,416 @@
     <button class="pill" id="btnAuto">AUTO ROTATE</button>
 </div>
 
-<div class="drawer" id="drawer">
-    <div class="drawerHeader">
-        <b id="dName">Speler</b>
-        <button class="closeBtn" id="dClose">CLOSE</button>
-    </div>
-    <img class="thumb" id="dImg" alt="player"/>
-    <div class="meta" id="dMeta"></div>
-</div>
-
 <div class="tip" id="tip"></div>
 
-<script type="module" src="/src/main.js"></script>
+<!-- Fullscreen modal -->
+<div class="modal" id="modal">
+    <button class="modalClose" id="modalClose">CLOSE</button>
+    <div class="modalInner">
+        <div class="modalLeft">
+            <div class="modalKicker" id="mKicker">FREE THE MAP • PLAYER</div>
+
+            <div>
+                <h1 class="modalTitle" id="mName">Naam</h1>
+                <div class="modalSub" id="mSub">Club • Seizoen</div>
+            </div>
+
+            <div class="typeBox" id="mType"></div>
+
+            <div class="metaGrid" id="mMeta"></div>
+
+            <div class="sourceLinks" id="mLinks"></div>
+        </div>
+
+        <div class="modalRight">
+            <img id="mImg" alt="player photo"/>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+
+    // =========================
+    // Aura cursor animation
+    // =========================
+    const state = {
+        x: innerWidth*0.5, y: innerHeight*0.5,
+        tx: innerWidth*0.5, ty: innerHeight*0.5
+    };
+    const bRed = document.getElementById("bRed");
+    const bWhite = document.getElementById("bWhite");
+    const bBlue = document.getElementById("bBlue");
+    const bNeutral = document.getElementById("bNeutral");
+
+    window.addEventListener("pointermove", (e)=>{ state.tx=e.clientX; state.ty=e.clientY; });
+
+    function place(el, x, y, s=1){ el.style.transform = `translate3d(${x}px, ${y}px,0) scale(${s})`; }
+
+    (function auraLoop(){
+        state.x += (state.tx - state.x) * 0.08;
+        state.y += (state.ty - state.y) * 0.08;
+        place(bRed,     state.x - 560*0.42, state.y - 560*0.62, 1.05);
+        place(bWhite,   state.x - 560*0.12, state.y - 560*0.25, 0.95);
+        place(bBlue,    state.x - 560*0.62, state.y - 560*0.08, 1.10);
+        place(bNeutral, state.x - 760*0.45, state.y - 760*0.40, 1.00);
+        requestAnimationFrame(auraLoop);
+    })();
+
+    // =========================
+    // CORS image proxy for WebGL + modal image
+    // =========================
+    function corsify(url, w=1400){
+        const clean = url.replace(/^https?:\/\//, "");
+        return `https://images.weserv.nl/?url=${encodeURIComponent(clean)}&w=${w}&output=jpg`;
+    }
+
+    // =========================
+    // DATA (zet hier jouw package/json fotos + info)
+    // =========================
+    const players = [
+        {
+            name:"Virgil van Dijk",
+            season:"25/26",
+            role:"CB",
+            club:"Liverpool FC",
+            country:"England",
+            // Zet hier jouw eigen image links (of lokale)
+            img:"https://b.fssta.com/uploads/application/soccer/headshots/3575.vresize.350.350.medium.1.png",
+            imgCredit:"https://commons.wikimedia.org/wiki/File:Virgil_van_Dijk_2019.jpg",
+            clubSource:"https://www.transfermarkt.com/virgil-van-dijk/profil/spieler/139208",
+            story:"Nederland is geen plek met een strakke grens. Via spelers zoals Van Dijk zie je hoe Nederland door clubs en competities verspreid is over de wereld."
+        },
+        {
+            name:"Frenkie de Jong",
+            season:"25/26",
+            role:"CM",
+            club:"FC Barcelona",
+            country:"Spain",
+            img:"https://b.fssta.com/uploads/application/soccer/headshots/33121.vresize.350.350.medium.1.png",
+            imgCredit:"https://commons.wikimedia.org/wiki/File:Frenkie_de_Jong_(2019).jpg",
+            clubSource:"https://www.transfermarkt.com/frenkie-de-jong/profil/spieler/326330",
+            story:"De route van spelers laat zien dat Nederland als netwerk werkt. Niet waar de grens ligt is belangrijk, maar waar de connecties heen gaan."
+        },
+        {
+            name:"Nathan Aké",
+            season:"25/26",
+            role:"CB/LB",
+            club:"Manchester City",
+            country:"England",
+            img:"https://commons.wikimedia.org/wiki/Special:FilePath/Nathan_Ak%C3%A9.JPG?width=1200",
+            imgCredit:"https://commons.wikimedia.org/wiki/File:Nathan_Aké.JPG",
+            clubSource:"https://www.transfermarkt.com/nathan-ake/profil/spieler/177476",
+            story:"Elke speler is een datapunt in een groter systeem. Samen maken ze het internationale netwerk zichtbaar waar Nederland onderdeel van is."
+        },
+        {
+            name:"Denzel Dumfries",
+            season:"25/26",
+            role:"RB/RWB",
+            club:"Inter Milan",
+            country:"Italy",
+            img:"https://commons.wikimedia.org/wiki/Special:FilePath/Denzel_Dumfries_in_2023.jpg?width=1200",
+            imgCredit:"https://commons.wikimedia.org/wiki/File:Denzel_Dumfries_in_2023.jpg",
+            clubSource:"https://www.transfermarkt.com/denzel-dumfries/profil/spieler/321528",
+            story:"Free the Map betekent: laat beweging zien. De internationale carrièrepaden van spelers zijn letterlijk die beweging."
+        },
+        {
+            name:"Cody Gakpo",
+            season:"25/26",
+            role:"LW/ST",
+            club:"Liverpool FC",
+            country:"England",
+            img:"https://commons.wikimedia.org/wiki/Special:FilePath/Cody_Gakpo_06042025_(1)_(cropped).jpg?width=1200%22",
+            imgCredit:"https://commons.wikimedia.org/wiki/File:Cody_Gakpo_06042025_(1)_(cropped).jpg",
+            clubSource:"https://www.transfermarkt.com/cody-gakpo/profil/spieler/434675",
+            story:"Door in te zoomen op één speler zie je het persoonlijke verhaal. Door uit te zoomen zie je Nederland als geheel: verspreid en verbonden."
+        }
+    ];
+
+    // =========================
+    // Three.js setup
+    // =========================
+    const app = document.getElementById("app");
+    const tip = document.getElementById("tip");
+
+    const scene = new THREE.Scene();
+    scene.background = null; // transparent so aura shows through
+
+    const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 200);
+    camera.position.set(0, 0, 22);
+
+    const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    app.appendChild(renderer.domElement);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 1.1));
+    const dir = new THREE.DirectionalLight(0xffffff, 0.35);
+    dir.position.set(10, 12, 14);
+    scene.add(dir);
+
+    // Camera controls
+    let targetRotX = 0, targetRotY = 0;
+    let rotX = 0, rotY = 0;
+    let zoom = 22;
+
+    let isDragging = false;
+    let lastX = 0, lastY = 0;
+
+    renderer.domElement.addEventListener("pointerdown", (e)=>{
+        isDragging = true;
+        lastX = e.clientX; lastY = e.clientY;
+        renderer.domElement.setPointerCapture(e.pointerId);
+    });
+    renderer.domElement.addEventListener("pointermove", (e)=>{
+        if(!isDragging) return;
+        const dx = e.clientX - lastX;
+        const dy = e.clientY - lastY;
+        lastX = e.clientX; lastY = e.clientY;
+
+        targetRotY += dx * 0.005;
+        targetRotX += dy * 0.005;
+        targetRotX = Math.max(-1.2, Math.min(1.2, targetRotX));
+    });
+    renderer.domElement.addEventListener("pointerup", ()=>{ isDragging = false; });
+
+    window.addEventListener("wheel", (e)=>{
+        const delta = Math.sign(e.deltaY);
+        targetRotY += delta * 0.18;
+        zoom = Math.max(10, Math.min(34, zoom + delta * 0.9));
+    }, { passive:true });
+
+    // Photo sphere
+    const group = new THREE.Group();
+    scene.add(group);
+
+    THREE.Cache.enabled = true;
+    const texLoader = new THREE.TextureLoader();
+    texLoader.setCrossOrigin("anonymous");
+
+    const geo = new THREE.PlaneGeometry(1.25, 1.85);
+    const radius = 10.5;
+    const cards = [];
+
+    function randomOnSphere(r){
+        const u = Math.random();
+        const v = Math.random();
+        const theta = 2 * Math.PI * u;
+        const phi = Math.acos(2*v - 1);
+        return new THREE.Vector3(
+            r * Math.sin(phi) * Math.cos(theta),
+            r * Math.cos(phi),
+            r * Math.sin(phi) * Math.sin(theta)
+        );
+    }
+
+    function addFrame(mesh){
+        const frameGeo = new THREE.PlaneGeometry(1.32, 1.92);
+        const frameMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent:true, opacity:0.92, side: THREE.DoubleSide });
+        const frame = new THREE.Mesh(frameGeo, frameMat);
+        frame.position.set(0,0,-0.01);
+        mesh.add(frame);
+    }
+
+    function makeCard(p){
+        const mat = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 1,
+            side: THREE.DoubleSide
+        });
+
+        const url = corsify(p.img, 1100);
+        const t = texLoader.load(url, ()=>{}, undefined, ()=>{ mat.color.setHex(0xededed); });
+        t.colorSpace = THREE.SRGBColorSpace;
+        mat.map = t;
+
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.copy(randomOnSphere(radius));
+        mesh.lookAt(0,0,0);
+        mesh.rotateZ((Math.random()-0.5)*0.2);
+        mesh.userData = p;
+        mesh.scale.setScalar(1);
+
+        addFrame(mesh);
+
+        group.add(mesh);
+        cards.push(mesh);
+    }
+
+    players.forEach(makeCard);
+
+    // =========================
+    // Hover tooltip
+    // =========================
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let hovered = null;
+    let autoRotate = true;
+
+    function setTip(show, x=0, y=0, html=""){
+        tip.style.opacity = show ? 1 : 0;
+        if(show){
+            tip.style.left = x + "px";
+            tip.style.top  = y + "px";
+            tip.innerHTML = html;
+        }
+    }
+
+    window.addEventListener("pointermove", (e)=>{
+        mouse.x = (e.clientX / innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        const hits = raycaster.intersectObjects(cards, true);
+
+        const hitObj = hits.length ? (hits[0].object.userData?.name ? hits[0].object : hits[0].object.parent) : null;
+
+        if(hitObj && hitObj.userData?.name){
+            if(hovered !== hitObj){
+                if(hovered) hovered.scale.setScalar(1);
+                hovered = hitObj;
+                hovered.scale.setScalar(1.22);
+            }
+            const p = hitObj.userData;
+            setTip(true, e.clientX, e.clientY,
+                `<b>${p.name}</b><div style="font-size:11px;color:#555;margin-top:2px">${p.role} • ${p.club} • ${p.season}</div>`
+            );
+        } else {
+            if(hovered) hovered.scale.setScalar(1);
+            hovered = null;
+            setTip(false);
+        }
+    });
+
+    // =========================
+    // Fullscreen modal (Left text / Right photo) + word-by-word typing
+    // =========================
+    const modal = document.getElementById("modal");
+    const modalClose = document.getElementById("modalClose");
+    const mName = document.getElementById("mName");
+    const mSub  = document.getElementById("mSub");
+    const mType = document.getElementById("mType");
+    const mMeta = document.getElementById("mMeta");
+    const mLinks= document.getElementById("mLinks");
+    const mImg  = document.getElementById("mImg");
+
+    let typeTimer = null;
+
+    function stopTyping(){
+        if(typeTimer) clearInterval(typeTimer);
+        typeTimer = null;
+    }
+
+    function typeWords(text, speedMs=55){
+        stopTyping();
+        mType.textContent = "";
+        const words = String(text).split(" ");
+        let i = 0;
+        typeTimer = setInterval(()=>{
+            if(i >= words.length){
+                stopTyping();
+                return;
+            }
+            mType.textContent += (i===0 ? "" : " ") + words[i];
+            i++;
+        }, speedMs);
+    }
+
+    function openModal(p){
+        modal.style.display = "block";
+
+        mName.textContent = p.name;
+        mSub.textContent = `${p.club} • ${p.season}`;
+
+        mImg.src = corsify(p.img, 1600);
+
+        mMeta.innerHTML = `
+        <div><b>Rol</b><br>${p.role}</div>
+        <div><b>Land</b><br>${p.country}</div>
+        <div><b>Club</b><br>${p.club}</div>
+        <div><b>Seizoen</b><br>${p.season}</div>
+      `;
+
+        mLinks.innerHTML = `
+        <div style="margin-top:6px"><b>Bron (club):</b> <a href="${p.clubSource}" target="_blank" rel="noreferrer">Transfermarkt</a></div>
+        <div><b>Photo credit:</b> <a href="${p.imgCredit}" target="_blank" rel="noreferrer">Wikimedia</a></div>
+      `;
+
+        // word-by-word animation
+        typeWords(p.story || "Nederland is een netwerk van mensen en beweging. Via spelers zie je hoe Nederland zich buiten de grens verspreidt.", 45);
+    }
+
+    function closeModal(){
+        modal.style.display = "none";
+        stopTyping();
+    }
+
+    modalClose.addEventListener("click", closeModal);
+    window.addEventListener("keydown", (e)=>{ if(e.key==="Escape") closeModal(); });
+
+    // click outside inner closes
+    modal.addEventListener("pointerdown", (e)=>{
+        if(e.target === modal) closeModal();
+    });
+
+    // click on card opens modal
+    window.addEventListener("click", ()=>{
+        if(!hovered) return;
+        openModal(hovered.userData);
+    });
+
+    // =========================
+    // Buttons
+    // =========================
+    document.getElementById("btnReset").addEventListener("click", ()=>{
+        targetRotX = 0; targetRotY = 0; zoom = 22;
+    });
+
+    document.getElementById("btnShuffle").addEventListener("click", ()=>{
+        cards.forEach(m=>{
+            m.position.copy(randomOnSphere(radius));
+            m.lookAt(0,0,0);
+            m.rotateZ((Math.random()-0.5)*0.2);
+        });
+    });
+
+    document.getElementById("btnAuto").addEventListener("click", ()=>{
+        autoRotate = !autoRotate;
+        document.getElementById("btnAuto").textContent = autoRotate ? "AUTO ROTATE" : "AUTO OFF";
+    });
+
+    // =========================
+    // Render loop
+    // =========================
+    function animate(){
+        requestAnimationFrame(animate);
+
+        rotX += (targetRotX - rotX) * 0.08;
+        rotY += (targetRotY - rotY) * 0.08;
+
+        if(autoRotate && !isDragging){
+            targetRotY += 0.0035;
+        }
+
+        const r = zoom;
+        const x = r * Math.sin(rotY) * Math.cos(rotX);
+        const y = r * Math.sin(rotX);
+        const z = r * Math.cos(rotY) * Math.cos(rotX);
+
+        camera.position.set(x,y,z);
+        camera.lookAt(0,0,0);
+
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener("resize", ()=>{
+        camera.aspect = innerWidth/innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(innerWidth, innerHeight);
+    });
+</script>
 </body>
 </html>

@@ -1,8 +1,53 @@
-html,body{height:100%;margin:0;background:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
-#app{position:fixed;inset:0;overflow:hidden;background:#fff}
+html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;overflow:hidden;background:#fff}
+
+/* =========================
+   NL AURA BACKGROUND
+   ========================= */
+.aura{
+    position:fixed; inset:-20%;
+    pointer-events:none;
+    z-index:0;
+    filter: blur(60px) saturate(120%);
+    opacity: 0.95;
+    transform: translate3d(0,0,0);
+}
+.blob{
+    position:absolute;
+    width: 560px;
+    height: 560px;
+    border-radius: 999px;
+    mix-blend-mode: multiply;
+    will-change: transform;
+    opacity: 0.85;
+}
+.red  { background: radial-gradient(circle at 30% 30%, rgba(174,28,40,.95), rgba(174,28,40,0) 70%); }
+.white{ background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.98), rgba(255,255,255,0) 70%); mix-blend-mode: screen; opacity:0.70; }
+.blue { background: radial-gradient(circle at 30% 30%, rgba(33,70,139,.95), rgba(33,70,139,0) 70%); }
+.neutral{
+    background: radial-gradient(circle at 30% 30%, rgba(0,0,0,.08), rgba(0,0,0,0) 70%);
+    mix-blend-mode: multiply;
+    opacity:0.28;
+    width: 760px; height: 760px;
+}
+.noise{
+    position:fixed; inset:0;
+    pointer-events:none;
+    z-index:1;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.10'/%3E%3C/svg%3E");
+    mix-blend-mode:multiply;
+    opacity:.22;
+}
+
+/* =========================
+   THREE.JS APP LAYER
+   ========================= */
+#app{
+    position:fixed; inset:0; overflow:hidden;
+    z-index:2;
+    background:transparent;
+}
 canvas{display:block}
 
-/* minimal UI (like your screenshot) */
 .topTitle{
     position:fixed;top:18px;left:0;right:0;
     text-align:center;font-size:12px;letter-spacing:.18em;
@@ -17,44 +62,123 @@ canvas{display:block}
 .pill{
     font-size:11px;letter-spacing:.06em;
     padding:6px 10px;border:1px solid #111;border-radius:0;
-    background:#fff;color:#111;cursor:pointer;
+    background:rgba(255,255,255,.75);color:#111;cursor:pointer;
+    backdrop-filter: blur(8px);
 }
 .pill:hover{background:#111;color:#fff}
-
-/* player info drawer */
-.drawer{
-    position:fixed;right:18px;top:18px;
-    width:min(320px, 88vw);
-    border:1px solid rgba(0,0,0,.18);
-    background:rgba(255,255,255,.92);
-    backdrop-filter: blur(8px);
-    padding:12px;border-radius:12px;
-    z-index:30;box-shadow:0 18px 60px rgba(0,0,0,.12);
-    display:none;
-}
-.drawerHeader{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.drawerHeader b{font-size:13px;color:#111}
-.closeBtn{border:1px solid #111;background:#fff;color:#111;padding:4px 8px;cursor:pointer}
-.closeBtn:hover{background:#111;color:#fff}
-.meta{margin-top:10px;font-size:12px;line-height:1.4;color:#111}
-.meta .muted{color:#555}
-.thumb{
-    width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:10px;
-    border:1px solid rgba(0,0,0,.12);
-    background:#f4f4f4;
-    margin-top:10px;
-}
 
 /* hover tooltip */
 .tip{
     position:fixed;z-index:25;pointer-events:none;opacity:0;
-    background:rgba(255,255,255,.95);
+    background:rgba(255,255,255,.92);
     border:1px solid rgba(0,0,0,.18);
     padding:8px 10px;border-radius:10px;
     box-shadow:0 14px 40px rgba(0,0,0,.10);
     transform: translate(-50%, -120%);
     font-size:12px;color:#111;
     white-space:nowrap;
+    backdrop-filter: blur(10px);
 }
-.tip b{display:block;font-size:12px;line-height:1.2}
-.tip span{display:block;color:#555;font-size:11px;margin-top:2px}
+
+/* =========================
+   FULLSCREEN PLAYER PANEL
+   LEFT: text / RIGHT: image
+   ========================= */
+.modal{
+    position:fixed; inset:0;
+    z-index:60;
+    display:none;
+    background: rgba(255,255,255,.55);
+    backdrop-filter: blur(16px);
+}
+.modalInner{
+    position:absolute; inset:0;
+    display:grid;
+    grid-template-columns: 1.1fr 1fr;
+}
+
+.modalLeft{
+    padding:48px 44px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:18px;
+    color:#111;
+}
+.modalKicker{
+    font-size:12px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:rgba(0,0,0,.55);
+}
+.modalTitle{
+    font-size:44px;
+    line-height:1.05;
+    margin:0;
+    letter-spacing:-0.02em;
+}
+.modalSub{
+    font-size:14px;
+    color:rgba(0,0,0,.65);
+    margin-top:6px;
+}
+
+.typeBox{
+    margin-top:14px;
+    font-size:18px;
+    line-height:1.55;
+    max-width: 46ch;
+    color: rgba(0,0,0,.85);
+}
+
+.metaGrid{
+    margin-top:18px;
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:10px 18px;
+    font-size:13px;
+    color: rgba(0,0,0,.75);
+}
+.metaGrid b{color:#111}
+
+.sourceLinks{
+    margin-top:14px;
+    font-size:12px;
+    color: rgba(0,0,0,.65);
+}
+.sourceLinks a{color:#111}
+
+.modalRight{
+    position:relative;
+    overflow:hidden;
+    border-left: 1px solid rgba(0,0,0,.10);
+}
+.modalRight img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+    transform: scale(1.02);
+    filter: contrast(1.02) saturate(1.05);
+}
+
+.modalClose{
+    position:fixed;
+    top:18px; right:18px;
+    z-index:70;
+    border:1px solid #111;
+    background:rgba(255,255,255,.75);
+    backdrop-filter: blur(8px);
+    padding:8px 12px;
+    cursor:pointer;
+    letter-spacing:.08em;
+    font-size:11px;
+}
+.modalClose:hover{background:#111;color:#fff}
+
+@media (max-width: 900px){
+    .modalInner{grid-template-columns: 1fr}
+    .modalRight{order:-1; height:42vh; border-left:none; border-bottom:1px solid rgba(0,0,0,.10)}
+    .modalLeft{padding:24px 18px}
+    .modalTitle{font-size:34px}
+}
