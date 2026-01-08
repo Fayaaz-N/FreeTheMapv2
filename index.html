@@ -103,11 +103,11 @@
 
     // helper: als img lokaal is -> direct, als extern -> corsify
     function getImgUrl(p, w = 1100) {
-        const src = String(p?.img || "").trim();
+        const src = String("./public"+ p?.img || "").trim();
         if (!src) return "/img/players/fallback.jpg";
 
         // ✅ lokaal in Vite public: "/img/players/..."
-        if (src.startsWith("/")) return src;
+        if (src.startsWith("/public/img")) return src;
 
         // (optioneel) relatief pad
         if (src.startsWith("./")) return src;
