@@ -56,7 +56,70 @@
 </div>
 
 <script type="module">
+    console.log("SCRIPT START");
+
+
     import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+    import {players} from "./src/data/players.js";
+    import localMap from "./src/data/players_local_map.json" with { type: "json" };
+
+    console.log("players import:", players);
+    console.log("localMap import:", localMap);
+
+    // ===== local img map -> match op naam =====
+    const cleanKey = (s) =>
+        String(s || "")
+            .replace(/\u00A0/g, " ")
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // accents weg
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, " ")
+            .trim()
+            .replace(/\s+/g, " ");
+
+    const localMapNormalized = new Map(
+        Object.entries(localMap).map(([name, url]) => [cleanKey(name), url])
+    );
+    console.log("Normalized localMap keys:", [...localMapNormalized.keys()].slice(0, 10));
+    console.log("First player name:", players[0]?.name, "=>", cleanKey(players[0]?.name));
+
+    // vul img automatisch vanuit localMap als img leeg is of extern
+    // players.forEach(p => {
+    //     const hit = localMapNormalized.get(cleanKey(p.name));
+    //     if (hit) p.img = hit; // bv "/img/players/wilbert-suvrijn.jpg"
+    // });
+
+    players.forEach(p => {
+        const k = cleanKey(p.name);
+        const hit = localMapNormalized.get(k);
+
+        if (!hit) {
+            console.warn("❌ NO IMG MATCH FOR:", p.name, "->", k);
+        } else {
+            console.log("✅ IMG MATCH:", p.name, "->", hit);
+            p.img = hit;
+        }
+    });
+
+
+    // helper: als img lokaal is -> direct, als extern -> corsify
+    function getImgUrl(p, w = 1100) {
+        const src = String(p?.img || "").trim();
+        if (!src) return "/img/players/fallback.jpg";
+
+        // ✅ lokaal in Vite public: "/img/players/..."
+        if (src.startsWith("/")) return src;
+
+        // (optioneel) relatief pad
+        if (src.startsWith("./")) return src;
+
+        // extern
+        if (src.startsWith("http")) return corsify(src, w);
+
+        return src;
+    }
+
+
+
 
     // =========================
     // Aura cursor animation
@@ -95,64 +158,7 @@
     // =========================
     // DATA (zet hier jouw package/json fotos + info)
     // =========================
-    const players = [
-        {
-            name:"Virgil van Dijk",
-            season:"25/26",
-            role:"CB",
-            club:"Liverpool FC",
-            country:"England",
-            // Zet hier jouw eigen image links (of lokale)
-            img:"https://b.fssta.com/uploads/application/soccer/headshots/3575.vresize.350.350.medium.1.png",
-            imgCredit:"https://commons.wikimedia.org/wiki/File:Virgil_van_Dijk_2019.jpg",
-            clubSource:"https://www.transfermarkt.com/virgil-van-dijk/profil/spieler/139208",
-            story:"Nederland is geen plek met een strakke grens. Via spelers zoals Van Dijk zie je hoe Nederland door clubs en competities verspreid is over de wereld."
-        },
-        {
-            name:"Frenkie de Jong",
-            season:"25/26",
-            role:"CM",
-            club:"FC Barcelona",
-            country:"Spain",
-            img:"https://b.fssta.com/uploads/application/soccer/headshots/33121.vresize.350.350.medium.1.png",
-            imgCredit:"https://commons.wikimedia.org/wiki/File:Frenkie_de_Jong_(2019).jpg",
-            clubSource:"https://www.transfermarkt.com/frenkie-de-jong/profil/spieler/326330",
-            story:"De route van spelers laat zien dat Nederland als netwerk werkt. Niet waar de grens ligt is belangrijk, maar waar de connecties heen gaan."
-        },
-        {
-            name:"Nathan Aké",
-            season:"25/26",
-            role:"CB/LB",
-            club:"Manchester City",
-            country:"England",
-            img:"https://commons.wikimedia.org/wiki/Special:FilePath/Nathan_Ak%C3%A9.JPG?width=1200",
-            imgCredit:"https://commons.wikimedia.org/wiki/File:Nathan_Aké.JPG",
-            clubSource:"https://www.transfermarkt.com/nathan-ake/profil/spieler/177476",
-            story:"Elke speler is een datapunt in een groter systeem. Samen maken ze het internationale netwerk zichtbaar waar Nederland onderdeel van is."
-        },
-        {
-            name:"Denzel Dumfries",
-            season:"25/26",
-            role:"RB/RWB",
-            club:"Inter Milan",
-            country:"Italy",
-            img:"https://commons.wikimedia.org/wiki/Special:FilePath/Denzel_Dumfries_in_2023.jpg?width=1200",
-            imgCredit:"https://commons.wikimedia.org/wiki/File:Denzel_Dumfries_in_2023.jpg",
-            clubSource:"https://www.transfermarkt.com/denzel-dumfries/profil/spieler/321528",
-            story:"Free the Map betekent: laat beweging zien. De internationale carrièrepaden van spelers zijn letterlijk die beweging."
-        },
-        {
-            name:"Cody Gakpo",
-            season:"25/26",
-            role:"LW/ST",
-            club:"Liverpool FC",
-            country:"England",
-            img:"https://commons.wikimedia.org/wiki/Special:FilePath/Cody_Gakpo_06042025_(1)_(cropped).jpg?width=1200%22",
-            imgCredit:"https://commons.wikimedia.org/wiki/File:Cody_Gakpo_06042025_(1)_(cropped).jpg",
-            clubSource:"https://www.transfermarkt.com/cody-gakpo/profil/spieler/434675",
-            story:"Door in te zoomen op één speler zie je het persoonlijke verhaal. Door uit te zoomen zie je Nederland als geheel: verspreid en verbonden."
-        }
-    ];
+
 
     // =========================
     // Three.js setup
@@ -217,7 +223,7 @@
     texLoader.setCrossOrigin("anonymous");
 
     const geo = new THREE.PlaneGeometry(1.25, 1.85);
-    const radius = 10.5;
+    const radius = 11.5;
     const cards = [];
 
     function randomOnSphere(r){
@@ -248,8 +254,9 @@
             side: THREE.DoubleSide
         });
 
-        const url = corsify(p.img, 1100);
+        const url = getImgUrl(p, 1100);
         const t = texLoader.load(url, ()=>{}, undefined, ()=>{ mat.color.setHex(0xededed); });
+
         t.colorSpace = THREE.SRGBColorSpace;
         mat.map = t;
 
@@ -265,8 +272,38 @@
         group.add(mesh);
         cards.push(mesh);
     }
+    // === Player selectie helper ===
+    // options:
+    // - limit: number | null  (bv 60)
+    // - onlyWithPhoto: boolean (true = alleen players met img)
+    // - shuffle: boolean (true = random subset)
+    function selectPlayers(list, { limit = null, onlyWithPhoto = false, shuffle = false } = {}) {
+        let arr = Array.isArray(list) ? [...list] : [];
 
-    players.forEach(makeCard);
+        if (onlyWithPhoto) {
+            arr = arr.filter(p => {
+                const src = String(p?.img || "").trim();
+                return src.length > 0; // img is ingevuld (lokaal of extern)
+            });
+        }
+
+        if (shuffle) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+        }
+
+        if (typeof limit === "number" && Number.isFinite(limit) && limit > 0) {
+            arr = arr.slice(0, limit);
+        }
+
+        return arr;
+    }
+
+    // players.forEach(makeCard);
+
+    selectPlayers(players, { limit: 200, onlyWithPhoto: true, shuffle: true }).forEach(makeCard);
 
     // =========================
     // Hover tooltip
@@ -351,19 +388,30 @@
         mName.textContent = p.name;
         mSub.textContent = `${p.club} • ${p.season}`;
 
-        mImg.src = corsify(p.img, 1600);
+        mImg.src = getImgUrl(p, 1600);
 
-        mMeta.innerHTML = `
-        <div><b>Rol</b><br>${p.role}</div>
-        <div><b>Land</b><br>${p.country}</div>
-        <div><b>Club</b><br>${p.club}</div>
-        <div><b>Seizoen</b><br>${p.season}</div>
-      `;
+        const yearsActive = (() => {
+            if (!p.debut || !p.lastMatch) return "–";
+            const y1 = new Date(p.debut).getFullYear();
+            const y2 = new Date(p.lastMatch).getFullYear();
+            return `${y1}–${y2}`;
+        })();
 
-        mLinks.innerHTML = `
-        <div style="margin-top:6px"><b>Bron (club):</b> <a href="${p.clubSource}" target="_blank" rel="noreferrer">Transfermarkt</a></div>
-        <div><b>Photo credit:</b> <a href="${p.imgCredit}" target="_blank" rel="noreferrer">Wikimedia</a></div>
-      `;
+                    mSub.innerHTML = `
+              <span>${p.role}</span> •
+              <span>${p.club}</span> •
+              <span>${yearsActive}</span></br>
+              <span><b>Afkomst:</b> ${p.country}</span>
+
+            `;
+
+                    mMeta.innerHTML = `
+              <div><b>Interlands</b><br>${p.matches}</div>
+              <div><b>Goals</b><br>${p.goals}</div>
+              <div><b>Aanvoerder</b><br>${p.captainMatches}</div>
+              <div><b>Actief</b><br>${yearsActive}</div>
+            `;
+
 
         // word-by-word animation
         typeWords(p.story || "Nederland is een netwerk van mensen en beweging. Via spelers zie je hoe Nederland zich buiten de grens verspreidt.", 45);
