@@ -226,17 +226,17 @@
     const radius = 11.5;
     const cards = [];
 
-    function randomOnSphere(r){
-        const u = Math.random();
-        const v = Math.random();
-        const theta = 2 * Math.PI * u;
-        const phi = Math.acos(2*v - 1);
-        return new THREE.Vector3(
-            r * Math.sin(phi) * Math.cos(theta),
-            r * Math.cos(phi),
-            r * Math.sin(phi) * Math.sin(theta)
-        );
-    }
+    // function randomOnSphere(r){
+    //     const u = Math.random();
+    //     const v = Math.random();
+    //     const theta = 2 * Math.PI * u;
+    //     const phi = Math.acos(2*v - 1);
+    //     return new THREE.Vector3(
+    //         r * Math.sin(phi) * Math.cos(theta),
+    //         r * Math.cos(phi),
+    //         r * Math.sin(phi) * Math.sin(theta)
+    //     );
+    // }
 
     function addFrame(mesh){
         const frameGeo = new THREE.PlaneGeometry(1.32, 1.92);
@@ -245,8 +245,33 @@
         frame.position.set(0,0,-0.01);
         mesh.add(frame);
     }
+    function fibonacciSpherePoints(count, r){
+        const pts = [];
+        const goldenAngle = Math.PI * (3 - Math.sqrt(5));
 
-    function makeCard(p){
+        for(let i = 0; i < count; i++){
+            const t = count === 1 ? 0 : i / (count - 1);
+            const y = 1 - 2 * t;
+            const radiusAtY = Math.sqrt(1 - y * y);
+
+            const theta = goldenAngle * i;
+            const x = Math.cos(theta) * radiusAtY;
+            const z = Math.sin(theta) * radiusAtY;
+
+            pts.push(new THREE.Vector3(x, y, z).multiplyScalar(r));
+        }
+        return pts;
+    }
+
+    function shuffleArray(arr){
+        for(let i = arr.length - 1; i > 0; i--){
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    function makeCard(p, index){
         const mat = new THREE.MeshBasicMaterial({
             color: 0xffffff,
             transparent: true,
@@ -255,15 +280,27 @@
         });
 
         const url = getImgUrl(p, 1100);
-        const t = texLoader.load(url, ()=>{}, undefined, ()=>{ mat.color.setHex(0xededed); });
+        const t = texLoader.load(
+            url,
+            ()=>{},
+            undefined,
+            ()=>{ mat.color.setHex(0xededed); }
+        );
 
         t.colorSpace = THREE.SRGBColorSpace;
         mat.map = t;
 
         const mesh = new THREE.Mesh(geo, mat);
-        mesh.position.copy(randomOnSphere(radius));
+
+        // ✅ STRAKKE, GELIJKMATIGE VERDELING
+        mesh.position.copy(spherePoints[index]);
+
+        // ✅ VEEL RUSTIGERE ROTATIE
+        mesh.rotation.set(0, 0, (Math.random() - 0.5) * 0.08);
+
+        // initieel naar centrum
         mesh.lookAt(0,0,0);
-        mesh.rotateZ((Math.random()-0.5)*0.2);
+
         mesh.userData = p;
         mesh.scale.setScalar(1);
 
@@ -272,6 +309,7 @@
         group.add(mesh);
         cards.push(mesh);
     }
+
     // === Player selectie helper ===
     // options:
     // - limit: number | null  (bv 60)
@@ -303,7 +341,19 @@
 
     // players.forEach(makeCard);
 
-    selectPlayers(players, { limit: 200, onlyWithPhoto: true, shuffle: true }).forEach(makeCard);
+    // selectPlayers(players, { limit: 200, onlyWithPhoto: true, shuffle: true }).forEach(makeCard);
+
+    const usedPlayers = selectPlayers(players, {
+        limit: 200,
+        onlyWithPhoto: true,
+        shuffle: true
+    });
+
+    let spherePoints = shuffleArray(
+        fibonacciSpherePoints(usedPlayers.length, radius)
+    );
+
+    usedPlayers.forEach((p, i) => makeCard(p, i));
 
     // =========================
     // Hover tooltip
@@ -444,11 +494,21 @@
     });
 
     document.getElementById("btnShuffle").addEventListener("click", ()=>{
-        cards.forEach(m=>{
-            m.position.copy(randomOnSphere(radius));
+        // cards.forEach(m=>{
+        //     m.position.copy(randomOnSphere(radius));
+        //     m.lookAt(0,0,0);
+        //     m.rotateZ((Math.random()-0.5)*0.2);
+        // });
+        spherePoints = shuffleArray(
+            fibonacciSpherePoints(cards.length, radius)
+        );
+
+        cards.forEach((m, i)=>{
+            m.position.copy(spherePoints[i]);
+            m.rotation.z = (Math.random() - 0.5) * 0.08;
             m.lookAt(0,0,0);
-            m.rotateZ((Math.random()-0.5)*0.2);
         });
+
     });
 
     document.getElementById("btnAuto").addEventListener("click", ()=>{
