@@ -144,27 +144,35 @@
         return `https://images.weserv.nl/?url=${encodeURIComponent(clean)}&w=${w}&output=jpg`;
     }
 
+    const GITHUB_RAW_BASE =
+        "https://raw.githubusercontent.com/Fayaaz-N/FreeTheMapv2/main/public";
+
     function getImgUrl(p, w = 1100){
         let src = String(p?.img || "").trim();
-        if(!src) src = "/img/players/fallback.jpg";
 
-        // alles normaliseren naar "/img/..."
-        src = src.replace(/^\/?public\//, "/");
-        if (src.startsWith("/public/")) src = src.replace("/public/", "/");
-        if (src.startsWith("img/")) src = "/" + src;
-
-        // als localMap "/img/players/..." geeft -> goed zo laten
-        if (src.startsWith("/img/")) {
-            // ✅ werkt op GitHub Pages én lokaal, want BASE_URL pakt "/FreeTheMapv2/" automatisch
-            return new URL(src.replace(/^\//, ""), import.meta.url).toString();
+        // fallback
+        if (!src) {
+            return `${GITHUB_RAW_BASE}/img/players/fallback.jpg`;
         }
 
-        // extern via proxy
-        if (src.startsWith("http")) return corsify(src, w);
+        // haal evt "/public" of leading slashes weg
+        src = src.replace(/^\/?public\//, "");
+        src = src.replace(/^\/+/, "");
 
-        // fallback: maak ook relative via BASE_URL
-        return new URL(src.replace(/^\//, ""), import.meta.url).toString();
+        // als het een lokaal img-pad is → force GitHub RAW
+        if (src.startsWith("img/")) {
+            return `${GITHUB_RAW_BASE}/${src}`;
+        }
+
+        // als het al een volledige http(s) url is
+        if (src.startsWith("http")) {
+            return src;
+        }
+
+        // laatste fallback
+        return `${GITHUB_RAW_BASE}/${src}`;
     }
+
 
 
     function shuffleInPlace(arr){
