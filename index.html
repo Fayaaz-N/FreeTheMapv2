@@ -146,15 +146,26 @@
 
     function getImgUrl(p, w = 1100){
         let src = String(p?.img || "").trim();
-        if(!src) return "/public/img/players/fallback.jpg";
+        if(!src) src = "/img/players/fallback.jpg";
 
-        src = src.replace(/^\/?public\//, "/public/");
-        if (src.startsWith("/img/")) src = "/public" + src;
-        if (src.startsWith("img/")) src = "/public/" + src;
+        // alles normaliseren naar "/img/..."
+        src = src.replace(/^\/?public\//, "/");
+        if (src.startsWith("/public/")) src = src.replace("/public/", "/");
+        if (src.startsWith("img/")) src = "/" + src;
 
+        // als localMap "/img/players/..." geeft -> goed zo laten
+        if (src.startsWith("/img/")) {
+            // ✅ werkt op GitHub Pages én lokaal, want BASE_URL pakt "/FreeTheMapv2/" automatisch
+            return new URL(src.replace(/^\//, ""), import.meta.url).toString();
+        }
+
+        // extern via proxy
         if (src.startsWith("http")) return corsify(src, w);
-        return src;
+
+        // fallback: maak ook relative via BASE_URL
+        return new URL(src.replace(/^\//, ""), import.meta.url).toString();
     }
+
 
     function shuffleInPlace(arr){
         for(let i = arr.length - 1; i > 0; i--){
