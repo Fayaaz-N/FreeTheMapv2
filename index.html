@@ -5,11 +5,9 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <title>Onze jongens van Oranje</title>
     <link rel="stylesheet" href="src/style.css">
-
 </head>
 
 <body>
-<!-- Aura -->
 <div class="aura" id="aura">
     <div class="blob red" id="bRed"></div>
     <div class="blob white" id="bWhite"></div>
@@ -18,7 +16,6 @@
 </div>
 <div class="noise"></div>
 
-<!-- Three.js -->
 <div class="topTitle">Onze jongens van Oranje<br>JOEP • IVY • FAYAAZ</div>
 <div id="app"></div>
 
@@ -30,113 +27,212 @@
 
 <div class="tip" id="tip"></div>
 
-<!-- Fullscreen modal -->
-<div class="modal" id="modal">
-    <button class="modalClose" id="modalClose">CLOSE</button>
-    <div class="modalInner">
-        <div class="modalLeft">
-            <div class="modalKicker" id="mKicker">FREE THE MAP • PLAYER</div>
+<div class="timelineUI" id="timelineUI">
+    <div class="timelineTop">
+        <div class="timelineLabel" id="tlLabel">Gekozen jaar: –</div>
+    </div>
 
-            <div>
-                <h1 class="modalTitle" id="mName">Naam</h1>
-                <div class="modalSub" id="mSub">Club • Seizoen</div>
-            </div>
+    <div class="timelineRow">
+        <input id="tlRange" type="range" min="0" max="2000" step="1" value="0" />
+        <div class="timelineDot" id="tlDot"></div>
+    </div>
 
-            <div class="typeBox" id="mType"></div>
-
-            <div class="metaGrid" id="mMeta"></div>
-
-            <div class="sourceLinks" id="mLinks"></div>
-        </div>
-
-        <div class="modalRight">
-            <img id="mImg" alt="player photo"/>
-        </div>
+    <div class="timelineDates">
+        <span id="tlMin">–</span>
+        <span id="tlMid">–</span>
+        <span id="tlMax">–</span>
     </div>
 </div>
 
 <script type="module">
-    console.log("SCRIPT START");
+    console.log("✅ SCRIPT START");
 
+    window.addEventListener("error", (e) => console.log("❌ window.error:", e?.message, e));
+    window.addEventListener("unhandledrejection", (e) => console.log("❌ unhandledrejection:", e?.reason, e));
 
     import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-    import {players} from "./src/data/players.js";
+    import { players } from "./src/data/players.js";
     import localMap from "./src/data/players_local_map.json" with { type: "json" };
 
-    console.log("players import:", players);
-    console.log("localMap import:", localMap);
+    console.log("✅ imports ok:", {
+        playersLen: players?.length,
+        localMapKeys: Object.keys(localMap || {}).length
+    });
 
-    // ===== local img map -> match op naam =====
+    // ============================================================
+    // ✅ INSTELLINGEN (zoals LIMIT)
+    // ============================================================
+    const LIMIT = null;                   // bv 200, of null = alles
+    const REQUIRE_DEBUT = true;           // true aanbevolen (timeline)
+    const ONLY_WITH_PHOTO = false;        // true = alleen foto, false = fallback
+
+    // ✅ RANDOM LAYOUT (zonder random timeline!)
+    const LAYOUT_RANDOMIZE_ON_INIT = true;
+    const LAYOUT_RANDOMIZE_ON_COUNT_CHANGE = false; // true = elke keer als activeCount verandert
+    // ============================================================
+
+    // ============================================================
+    // ✅ TIMELINE VASTE JAREN
+    // ============================================================
+    const TIMELINE_START_YEAR = 1905;
+    const TIMELINE_END_YEAR   = 2025;
+    // ============================================================
+
+    // ============================================================
+    // ✅ AUTO SPACING / SCALE (800 spelers)
+    // ============================================================
+    const CARD_W = 1.5;
+    const CARD_H = 2.3;
+
+    const MIN_CARD_SCALE = 0.58;
+    const MAX_CARD_SCALE = 1.00;
+    const HOVER_BOOST    = 1.18;
+
+    const SPACING_MULT = 1.55;
+    const MIN_RADIUS   = 6.0;
+    const MAX_RADIUS   = 14.0;
+    const POS_LERP     = 0.10;
+
+    const ZOOM_MIN = 1;
+    const ZOOM_MAX = 915;
+    // ============================================================
+
+    // ============================================================
+    // ✅ AUTO-ROTATE STOPPEN OP MOUSEMOVE + RESUME NA IDLE
+    // ============================================================
+    const AUTO_ROTATE_IDLE_RESUME_MS = 1800; // <-- pas aan (ms)
+    let autoRotateUserEnabled = true;        // jouw knop (AUTO ROTATE) bepaalt dit
+    let lastUserActivityTs = performance.now();
+
+    function registerUserActivity(reason = "unknown") {
+        lastUserActivityTs = performance.now();
+        // (debug kan aan/uit)
+        // console.log("🛑 user activity:", reason);
+    }
+
+    function shouldAutoRotate(now) {
+        if (!autoRotateUserEnabled) return false;    // knop staat uit
+        if (isDragging) return false;                // tijdens drag nooit
+        return (now - lastUserActivityTs) > AUTO_ROTATE_IDLE_RESUME_MS;
+    }
+    // ============================================================
+
+    // -------------------------
+    // Helpers
+    // -------------------------
     const cleanKey = (s) =>
         String(s || "")
             .replace(/\u00A0/g, " ")
-            .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // accents weg
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, " ")
             .trim()
             .replace(/\s+/g, " ");
 
-    const localMapNormalized = new Map(
-        Object.entries(localMap).map(([name, url]) => [cleanKey(name), url])
-    );
-    console.log("Normalized localMap keys:", [...localMapNormalized.keys()].slice(0, 10));
-    console.log("First player name:", players[0]?.name, "=>", cleanKey(players[0]?.name));
+    function parseDateSafe(s) {
+        const d = new Date(s);
+        return Number.isFinite(d.getTime()) ? d : null;
+    }
 
-    // vul img automatisch vanuit localMap als img leeg is of extern
-    // players.forEach(p => {
-    //     const hit = localMapNormalized.get(cleanKey(p.name));
-    //     if (hit) p.img = hit; // bv "/img/players/wilbert-suvrijn.jpg"
-    // });
+    const yearFromDate = (s) => {
+        const d = parseDateSafe(s);
+        return d ? d.getFullYear() : null;
+    };
 
-    players.forEach(p => {
-        const k = cleanKey(p.name);
-        const hit = localMapNormalized.get(k);
+    function corsify(url, w = 1400) {
+        const clean = url.replace(/^https?:\/\//, "");
+        return `https://images.weserv.nl/?url=${encodeURIComponent(clean)}&w=${w}&output=jpg`;
+    }
 
-        if (!hit) {
-            console.warn("❌ NO IMG MATCH FOR:", p.name, "->", k);
-        } else {
-            console.log("✅ IMG MATCH:", p.name, "->", hit);
-            p.img = hit;
-        }
-    });
+    function getImgUrl(p, w = 1100){
+        let src = String(p?.img || "").trim();
+        if(!src) return "/public/img/players/fallback.jpg";
 
+        src = src.replace(/^\/?public\//, "/public/");
+        if (src.startsWith("/img/")) src = "/public" + src;
+        if (src.startsWith("img/")) src = "/public/" + src;
 
-    // helper: als img lokaal is -> direct, als extern -> corsify
-    function getImgUrl(p, w = 1100) {
-        const src = String("public"+ p?.img || "").trim();
-        if (!src) return "/img/players/fallback.jpg";
-
-        // ✅ lokaal in Vite public: "/img/players/..."
-        if (src.startsWith("/public/img")) return src;
-
-        // (optioneel) relatief pad
-        if (src.startsWith("./")) return src;
-
-        // extern
         if (src.startsWith("http")) return corsify(src, w);
-
         return src;
     }
 
+    function shuffleInPlace(arr){
+        for(let i = arr.length - 1; i > 0; i--){
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
 
+    // -------------------------
+    // Map images by name
+    // -------------------------
+    const localMapNormalized = new Map(
+        Object.entries(localMap || {}).map(([name, url]) => [cleanKey(name), url])
+    );
 
+    let matchCount = 0;
+    players.forEach((p) => {
+        const hit = localMapNormalized.get(cleanKey(p?.name));
+        if (hit) { p.img = hit; matchCount++; }
+    });
+    console.log("✅ image matches (localMap):", matchCount, "/", players.length);
 
-    // =========================
+    // -------------------------
+    // Build list (STABIEL: sort op debutYear)
+    // -------------------------
+    let usedPlayers = [...players];
+
+    if (ONLY_WITH_PHOTO) {
+        const before = usedPlayers.length;
+        usedPlayers = usedPlayers.filter(p => String(p?.img || "").trim().length > 0);
+        console.log("🖼️ ONLY_WITH_PHOTO enabled -> removed:", before - usedPlayers.length);
+    } else {
+        console.log("🖼️ ONLY_WITH_PHOTO disabled -> fallback for missing photos");
+    }
+
+    if (REQUIRE_DEBUT) {
+        const before = usedPlayers.length;
+        usedPlayers = usedPlayers.filter(p => parseDateSafe(p?.debut));
+        console.log("🗓️ REQUIRE_DEBUT enabled -> removed:", before - usedPlayers.length);
+    }
+
+    usedPlayers = usedPlayers.map(p => {
+        const y = yearFromDate(p?.debut);
+        return { ...p, __debutYear: y };
+    });
+
+    usedPlayers.sort((a,b) => {
+        const ya = (typeof a.__debutYear === "number") ? a.__debutYear : 9999;
+        const yb = (typeof b.__debutYear === "number") ? b.__debutYear : 9999;
+        return ya - yb;
+    });
+
+    if (typeof LIMIT === "number" && Number.isFinite(LIMIT) && LIMIT > 0) {
+        usedPlayers = usedPlayers.slice(0, LIMIT);
+        console.log("✂️ LIMIT applied:", LIMIT);
+    } else {
+        console.log("✂️ LIMIT disabled (null)");
+    }
+
+    console.log("✅ usedPlayers final:", usedPlayers.length);
+
+    // -------------------------
     // Aura cursor animation
-    // =========================
-    const state = {
-        x: innerWidth*0.5, y: innerHeight*0.5,
-        tx: innerWidth*0.5, ty: innerHeight*0.5
-    };
+    // -------------------------
+    const state = { x: innerWidth*0.5, y: innerHeight*0.5, tx: innerWidth*0.5, ty: innerHeight*0.5 };
     const bRed = document.getElementById("bRed");
     const bWhite = document.getElementById("bWhite");
     const bBlue = document.getElementById("bBlue");
     const bNeutral = document.getElementById("bNeutral");
 
-    window.addEventListener("pointermove", (e)=>{ state.tx=e.clientX; state.ty=e.clientY; });
+    // ✅ mousemove = activity -> stopt autoRotate (en resume later)
+    window.addEventListener("pointermove", (e)=>{
+        state.tx=e.clientX; state.ty=e.clientY;
+        registerUserActivity("pointermove");
+    });
 
-    function place(el, x, y, s=1){ el.style.transform = `translate3d(${x}px, ${y}px,0) scale(${s})`; }
-
+    function place(el, x, y, s=1){ if(el) el.style.transform = `translate3d(${x}px, ${y}px,0) scale(${s})`; }
     (function auraLoop(){
         state.x += (state.tx - state.x) * 0.08;
         state.y += (state.ty - state.y) * 0.08;
@@ -147,29 +243,16 @@
         requestAnimationFrame(auraLoop);
     })();
 
-    // =========================
-    // CORS image proxy for WebGL + modal image
-    // =========================
-    function corsify(url, w=1400){
-        const clean = url.replace(/^https?:\/\//, "");
-        return `https://images.weserv.nl/?url=${encodeURIComponent(clean)}&w=${w}&output=jpg`;
-    }
-
-    // =========================
-    // DATA (zet hier jouw package/json fotos + info)
-    // =========================
-
-
-    // =========================
+    // -------------------------
     // Three.js setup
-    // =========================
+    // -------------------------
     const app = document.getElementById("app");
     const tip = document.getElementById("tip");
 
     const scene = new THREE.Scene();
-    scene.background = null; // transparent so aura shows through
+    scene.background = null;
 
-    const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 200);
+    const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 900);
     camera.position.set(0, 0, 22);
 
     const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
@@ -183,7 +266,7 @@
     dir.position.set(10, 12, 14);
     scene.add(dir);
 
-    // Camera controls
+    // controls
     let targetRotX = 0, targetRotY = 0;
     let rotX = 0, rotY = 0;
     let zoom = 22;
@@ -192,11 +275,14 @@
     let lastX = 0, lastY = 0;
 
     renderer.domElement.addEventListener("pointerdown", (e)=>{
+        registerUserActivity("pointerdown");
         isDragging = true;
         lastX = e.clientX; lastY = e.clientY;
         renderer.domElement.setPointerCapture(e.pointerId);
     });
+
     renderer.domElement.addEventListener("pointermove", (e)=>{
+        registerUserActivity("drag-move");
         if(!isDragging) return;
         const dx = e.clientX - lastX;
         const dy = e.clientY - lastY;
@@ -206,15 +292,28 @@
         targetRotX += dy * 0.005;
         targetRotX = Math.max(-1.2, Math.min(1.2, targetRotX));
     });
-    renderer.domElement.addEventListener("pointerup", ()=>{ isDragging = false; });
+
+    renderer.domElement.addEventListener("pointerup", ()=>{
+        registerUserActivity("pointerup");
+        isDragging = false;
+    });
 
     window.addEventListener("wheel", (e)=>{
+        registerUserActivity("wheel");
+
         const delta = Math.sign(e.deltaY);
-        targetRotY += delta * 0.18;
-        zoom = Math.max(10, Math.min(34, zoom + delta * 0.9));
+
+        // ✅ ALLEEN ZOOM — GEEN ROTATIE
+        zoom = Math.max(
+            ZOOM_MIN,
+            Math.min(ZOOM_MAX, zoom + delta * 1.1)
+        );
     }, { passive:true });
 
-    // Photo sphere
+
+    // -------------------------
+    // Cards
+    // -------------------------
     const group = new THREE.Group();
     scene.add(group);
 
@@ -222,310 +321,322 @@
     const texLoader = new THREE.TextureLoader();
     texLoader.setCrossOrigin("anonymous");
 
-    const geo = new THREE.PlaneGeometry(1.25, 1.85);
-    const radius = 11.5;
-    const cards = [];
-
-    // function randomOnSphere(r){
-    //     const u = Math.random();
-    //     const v = Math.random();
-    //     const theta = 2 * Math.PI * u;
-    //     const phi = Math.acos(2*v - 1);
-    //     return new THREE.Vector3(
-    //         r * Math.sin(phi) * Math.cos(theta),
-    //         r * Math.cos(phi),
-    //         r * Math.sin(phi) * Math.sin(theta)
-    //     );
-    // }
+    const geo = new THREE.PlaneGeometry(CARD_W, CARD_H);
 
     function addFrame(mesh){
-        const frameGeo = new THREE.PlaneGeometry(1.32, 1.92);
-        const frameMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent:true, opacity:0.92, side: THREE.DoubleSide });
+        const frameGeo = new THREE.PlaneGeometry(CARD_W + 0.07, CARD_H + 0.07);
+        const frameMat = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.92,
+            side: THREE.DoubleSide,
+            depthTest: false,
+            depthWrite: false
+        });
         const frame = new THREE.Mesh(frameGeo, frameMat);
-        frame.position.set(0,0,-0.01);
+        frame.position.set(0,0,-0.03);
+        frame.renderOrder = 0;
+        mesh.renderOrder = 1;
         mesh.add(frame);
     }
+
     function fibonacciSpherePoints(count, r){
         const pts = [];
         const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-
         for(let i = 0; i < count; i++){
             const t = count === 1 ? 0 : i / (count - 1);
             const y = 1 - 2 * t;
             const radiusAtY = Math.sqrt(1 - y * y);
-
             const theta = goldenAngle * i;
             const x = Math.cos(theta) * radiusAtY;
             const z = Math.sin(theta) * radiusAtY;
-
             pts.push(new THREE.Vector3(x, y, z).multiplyScalar(r));
         }
         return pts;
     }
 
-    function shuffleArray(arr){
-        for(let i = arr.length - 1; i > 0; i--){
-            const j = Math.floor(Math.random() * (i + 1));
-            [arr[i], arr[j]] = [arr[j], arr[i]];
-        }
-        return arr;
-    }
+    const cards = [];
+    const TOTAL = usedPlayers.length;
 
-    function makeCard(p, index){
+    console.log("🧱 creating meshes:", TOTAL);
+
+    for (let i = 0; i < TOTAL; i++){
+        const p = usedPlayers[i];
+
         const mat = new THREE.MeshBasicMaterial({
             color: 0xffffff,
             transparent: true,
             opacity: 1,
-            side: THREE.DoubleSide
+            side: THREE.DoubleSide,
+            depthWrite: false
         });
 
         const url = getImgUrl(p, 1100);
-        const t = texLoader.load(
+        if (i < 3) console.log("🖼️ texture url:", i, p.name, url);
+
+        texLoader.load(
             url,
-            ()=>{},
+            (tex) => {
+                tex.colorSpace = THREE.SRGBColorSpace;
+                mat.map = tex;
+                mat.needsUpdate = true;
+            },
             undefined,
-            ()=>{ mat.color.setHex(0xededed); }
+            (err) => {
+                console.log("❌ texture FAIL:", p.name, url, err);
+                mat.color.setHex(0xededed);
+                mat.needsUpdate = true;
+            }
         );
 
-        t.colorSpace = THREE.SRGBColorSpace;
-        mat.map = t;
-
         const mesh = new THREE.Mesh(geo, mat);
-
-        // ✅ STRAKKE, GELIJKMATIGE VERDELING
-        mesh.position.copy(spherePoints[index]);
-
-        // ✅ VEEL RUSTIGERE ROTATIE
-        mesh.rotation.set(0, 0, (Math.random() - 0.5) * 0.08);
-
-        // initieel naar centrum
-        mesh.lookAt(0,0,0);
-
         mesh.userData = p;
+        mesh.visible = false;
+        mesh.userData.__baseScale = 1;
         mesh.scale.setScalar(1);
 
         addFrame(mesh);
-
         group.add(mesh);
         cards.push(mesh);
     }
 
-    // === Player selectie helper ===
-    // options:
-    // - limit: number | null  (bv 60)
-    // - onlyWithPhoto: boolean (true = alleen players met img)
-    // - shuffle: boolean (true = random subset)
-    function selectPlayers(list, { limit = null, onlyWithPhoto = false, shuffle = false } = {}) {
-        let arr = Array.isArray(list) ? [...list] : [];
+    console.log("✅ meshes created:", cards.length);
 
-        if (onlyWithPhoto) {
-            arr = arr.filter(p => {
-                const src = String(p?.img || "").trim();
-                return src.length > 0; // img is ingevuld (lokaal of extern)
-            });
-        }
-
-        if (shuffle) {
-            for (let i = arr.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [arr[i], arr[j]] = [arr[j], arr[i]];
-            }
-        }
-
-        if (typeof limit === "number" && Number.isFinite(limit) && limit > 0) {
-            arr = arr.slice(0, limit);
-        }
-
-        return arr;
-    }
-
-    // players.forEach(makeCard);
-
-    // selectPlayers(players, { limit: 200, onlyWithPhoto: true, shuffle: true }).forEach(makeCard);
-//limiet aanpassen
-    const usedPlayers = selectPlayers(players, {
-        limit: 200,
-        onlyWithPhoto: true,
-        shuffle: true
-    });
-
-    let spherePoints = shuffleArray(
-        fibonacciSpherePoints(usedPlayers.length, radius)
-    );
-
-    usedPlayers.forEach((p, i) => makeCard(p, i));
-
-    // =========================
-    // Hover tooltip
-    // =========================
+    // -------------------------
+    // Tooltip + hover (RAYCAST)
+    // -------------------------
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
     let hovered = null;
-    let autoRotate = true;
 
     function setTip(show, x=0, y=0, html=""){
+        if(!tip) return;
         tip.style.opacity = show ? 1 : 0;
         if(show){
-            tip.style.left = x + "px";
-            tip.style.top  = y + "px";
+            tip.style.left = (x + 14) + "px";
+            tip.style.top  = (y + 14) + "px";
             tip.innerHTML = html;
         }
     }
 
+    // -------------------------
+    // Timeline fixed years 1905–2025
+    // -------------------------
+    const tlRange = document.getElementById("tlRange");
+    const tlLabel = document.getElementById("tlLabel");
+    const tlDot   = document.getElementById("tlDot");
+    const tlMinEl = document.getElementById("tlMin");
+    const tlMidEl = document.getElementById("tlMid");
+    const tlMaxEl = document.getElementById("tlMax");
+
+    tlMinEl.textContent = TIMELINE_START_YEAR;
+    tlMidEl.textContent = Math.round((TIMELINE_START_YEAR + TIMELINE_END_YEAR) * 0.5);
+    tlMaxEl.textContent = TIMELINE_END_YEAR;
+
+    tlRange.min = 0;
+    tlRange.max = 2000;
+    tlRange.value = 0;
+
+    let chosenYear = TIMELINE_START_YEAR;
+
+    let activeCount = 0;
+    let targetRadius = MIN_RADIUS;
+    let spherePoints = [];
+
+    let layoutOrder = [];
+
+    function setDotFromRange(){
+        const v = Number(tlRange.value);
+        const f = v / Number(tlRange.max);
+        const x = f * tlRange.clientWidth;
+        tlDot.style.left = `${x}px`;
+    }
+
+    function setYearFromSlider(){
+        const v = Number(tlRange.value);
+        const f = v / Number(tlRange.max);
+        const y = TIMELINE_START_YEAR + (TIMELINE_END_YEAR - TIMELINE_START_YEAR) * f;
+        chosenYear = Math.round(y);
+        tlLabel.textContent = `Gekozen jaar: ${chosenYear}`;
+        setDotFromRange();
+    }
+
+    function computeActiveCountByYear(y){
+        let lo = 0;
+        let hi = usedPlayers.length;
+        while (lo < hi){
+            const mid = (lo + hi) >> 1;
+            const dY = (typeof usedPlayers[mid].__debutYear === "number") ? usedPlayers[mid].__debutYear : 9999;
+            if (dY <= y) lo = mid + 1;
+            else hi = mid;
+        }
+        return lo;
+    }
+
+    function computeRadius(n){
+        const desired = (CARD_W * SPACING_MULT);
+        const r = desired * Math.sqrt(Math.max(1, n) / (4 * Math.PI));
+        return Math.min(MAX_RADIUS, Math.max(MIN_RADIUS, r));
+    }
+
+    function computeCardBaseScale(n){
+        const REF = 140;
+        const s = Math.sqrt(REF / Math.max(1, n));
+        return Math.max(MIN_CARD_SCALE, Math.min(MAX_CARD_SCALE, s));
+    }
+
+    function randomizeLayoutOrder(count){
+        layoutOrder = Array.from({length: count}, (_, i) => i);
+        shuffleInPlace(layoutOrder);
+    }
+
+    function rebuildLayoutIfNeeded(){
+        const nextCount = computeActiveCountByYear(chosenYear);
+
+        if (nextCount !== activeCount) {
+            activeCount = nextCount;
+
+            targetRadius = computeRadius(activeCount);
+            spherePoints = fibonacciSpherePoints(activeCount, targetRadius);
+
+            if (layoutOrder.length !== activeCount) {
+                layoutOrder = Array.from({length: activeCount}, (_, i) => i);
+                if (LAYOUT_RANDOMIZE_ON_INIT && activeCount > 0 && layoutOrder.every((v,i)=>v===i)) {
+                    shuffleInPlace(layoutOrder);
+                }
+                if (LAYOUT_RANDOMIZE_ON_COUNT_CHANGE) shuffleInPlace(layoutOrder);
+            }
+
+            const baseS = computeCardBaseScale(activeCount);
+
+            for (let i = 0; i < cards.length; i++){
+                const m = cards[i];
+                const on = i < activeCount;
+
+                m.visible = on;
+                if (on) {
+                    m.userData.__baseScale = baseS;
+                    m.scale.setScalar(baseS);
+                }
+            }
+
+            if (hovered) hovered = null;
+            setTip(false);
+
+            zoom = Math.max(zoom, targetRadius + 8);
+
+            console.log("🟠 ACTIVE CHANGED:", {
+                chosenYear,
+                activeCount,
+                radius: targetRadius.toFixed(2),
+                baseScale: baseS.toFixed(3),
+                layoutRandom: LAYOUT_RANDOMIZE_ON_COUNT_CHANGE
+            });
+        }
+    }
+
+    function updateLayoutPositions(){
+        for (let i = 0; i < activeCount; i++){
+            const m = cards[i];
+            const targetIndex = layoutOrder[i] ?? i;
+            const target = spherePoints[targetIndex];
+            if (!target) continue;
+            m.position.lerp(target, POS_LERP);
+            m.lookAt(0,0,0);
+        }
+    }
+
+    // hover uses activeCount
     window.addEventListener("pointermove", (e)=>{
+        // (mousemove is ook activity)
+        // registerUserActivity zit al boven bij aura listener, maar dubbel is ok
         mouse.x = (e.clientX / innerWidth) * 2 - 1;
         mouse.y = -(e.clientY / innerHeight) * 2 + 1;
 
         raycaster.setFromCamera(mouse, camera);
-        const hits = raycaster.intersectObjects(cards, true);
 
-        const hitObj = hits.length ? (hits[0].object.userData?.name ? hits[0].object : hits[0].object.parent) : null;
+        const visibleCards = cards.slice(0, activeCount);
+        const hits = raycaster.intersectObjects(visibleCards, true);
+        const hit = hits.length ? hits[0].object : null;
 
-        if(hitObj && hitObj.userData?.name){
-            if(hovered !== hitObj){
-                if(hovered) hovered.scale.setScalar(1);
-                hovered = hitObj;
-                hovered.scale.setScalar(1.22);
+        if(hit && hit.userData?.name){
+            if(hovered !== hit){
+                if(hovered) hovered.scale.setScalar(hovered.userData.__baseScale || 1);
+                hovered = hit;
+
+                const base = hovered.userData.__baseScale || 1;
+                hovered.scale.setScalar(base * HOVER_BOOST);
             }
-            const p = hitObj.userData;
+
+            const p = hit.userData;
+            const dy = yearFromDate(p.debut);
             setTip(true, e.clientX, e.clientY,
-                `<b>${p.name}</b><div style="font-size:11px;color:#555;margin-top:2px">${p.role} • ${p.club} • ${p.season}</div>`
+                `<b>${p.name}</b>
+         <div style="font-size:11px;color:#555;margin-top:4px">
+           ${p.country || "–"} • ${p.club || "–"}<br>
+           Debuut: <b>${dy ?? "–"}</b>
+         </div>`
             );
         } else {
-            if(hovered) hovered.scale.setScalar(1);
+            if(hovered) hovered.scale.setScalar(hovered.userData.__baseScale || 1);
             hovered = null;
             setTip(false);
         }
     });
 
-    // =========================
-    // Fullscreen modal (Left text / Right photo) + word-by-word typing
-    // =========================
-    const modal = document.getElementById("modal");
-    const modalClose = document.getElementById("modalClose");
-    const mName = document.getElementById("mName");
-    const mSub  = document.getElementById("mSub");
-    const mType = document.getElementById("mType");
-    const mMeta = document.getElementById("mMeta");
-    const mLinks= document.getElementById("mLinks");
-    const mImg  = document.getElementById("mImg");
-
-    let typeTimer = null;
-
-    function stopTyping(){
-        if(typeTimer) clearInterval(typeTimer);
-        typeTimer = null;
-    }
-
-    function typeWords(text, speedMs=55){
-        stopTyping();
-        mType.textContent = "";
-        const words = String(text).split(" ");
-        let i = 0;
-        typeTimer = setInterval(()=>{
-            if(i >= words.length){
-                stopTyping();
-                return;
-            }
-            mType.textContent += (i===0 ? "" : " ") + words[i];
-            i++;
-        }, speedMs);
-    }
-
-    function openModal(p){
-        modal.style.display = "block";
-
-        mName.textContent = p.name;
-        mSub.textContent = `${p.club} • ${p.season}`;
-
-        mImg.src = getImgUrl(p, 1600);
-
-        const yearsActive = (() => {
-            if (!p.debut || !p.lastMatch) return "–";
-            const y1 = new Date(p.debut).getFullYear();
-            const y2 = new Date(p.lastMatch).getFullYear();
-            return `${y1}–${y2}`;
-        })();
-
-                    mSub.innerHTML = `
-              <span>${p.role}</span> •
-              <span>${p.club}</span> •
-              <span>${yearsActive}</span></br>
-              <span><b>Land waar zij voor uit konden komen:</b> ${p.country}</span>
-
-            `;
-
-                    mMeta.innerHTML = `
-              <div><b>Interlands</b><br>${p.matches}</div>
-              <div><b>Goals</b><br>${p.goals}</div>
-              <div><b>Aanvoerder</b><br>${p.captainMatches}</div>
-              <div><b>Actief</b><br>${yearsActive}</div>
-            `;
-
-
-        // word-by-word animation
-        typeWords(p.story || "Nederland is een netwerk van mensen en beweging. Via spelers zie je hoe Nederland zich buiten de grens verspreidt.", 45);
-    }
-
-    function closeModal(){
-        modal.style.display = "none";
-        stopTyping();
-    }
-
-    modalClose.addEventListener("click", closeModal);
-    window.addEventListener("keydown", (e)=>{ if(e.key==="Escape") closeModal(); });
-
-    // click outside inner closes
-    modal.addEventListener("pointerdown", (e)=>{
-        if(e.target === modal) closeModal();
+    tlRange.addEventListener("input", ()=>{
+        registerUserActivity("timeline");
+        setYearFromSlider();
+        rebuildLayoutIfNeeded();
     });
 
-    // click on card opens modal
-    window.addEventListener("click", ()=>{
-        if(!hovered) return;
-        openModal(hovered.userData);
-    });
+    // init
+    setYearFromSlider();
+    activeCount = 0;
+    layoutOrder = [];
+    if (LAYOUT_RANDOMIZE_ON_INIT) randomizeLayoutOrder(Math.max(1, activeCount));
+    rebuildLayoutIfNeeded();
 
-    // =========================
+    // -------------------------
     // Buttons
-    // =========================
+    // -------------------------
     document.getElementById("btnReset").addEventListener("click", ()=>{
+        registerUserActivity("reset");
         targetRotX = 0; targetRotY = 0; zoom = 22;
+        console.log("🔁 reset view");
     });
 
     document.getElementById("btnShuffle").addEventListener("click", ()=>{
-        // cards.forEach(m=>{
-        //     m.position.copy(randomOnSphere(radius));
-        //     m.lookAt(0,0,0);
-        //     m.rotateZ((Math.random()-0.5)*0.2);
-        // });
-        spherePoints = shuffleArray(
-            fibonacciSpherePoints(cards.length, radius)
-        );
-
-        cards.forEach((m, i)=>{
-            m.position.copy(spherePoints[i]);
-            m.rotation.z = (Math.random() - 0.5) * 0.08;
-            m.lookAt(0,0,0);
-        });
-
+        registerUserActivity("shuffle");
+        if (activeCount <= 1) return;
+        randomizeLayoutOrder(activeCount);
+        console.log("🔀 shuffle layout (order randomized):", { activeCount });
     });
 
     document.getElementById("btnAuto").addEventListener("click", ()=>{
-        autoRotate = !autoRotate;
-        document.getElementById("btnAuto").textContent = autoRotate ? "AUTO ROTATE" : "AUTO OFF";
+        registerUserActivity("auto-toggle");
+        autoRotateUserEnabled = !autoRotateUserEnabled;
+
+        // als je hem AAN zet → meteen kunnen draaien (zonder wachten)
+        if (autoRotateUserEnabled) {
+            lastUserActivityTs = performance.now() - AUTO_ROTATE_IDLE_RESUME_MS - 1;
+        }
+
+        document.getElementById("btnAuto").textContent = autoRotateUserEnabled ? "AUTO ROTATE" : "AUTO OFF";
+        console.log("🌀 autoRotateUserEnabled:", autoRotateUserEnabled);
     });
 
-    // =========================
-    // Render loop
-    // =========================
-    function animate(){
-        requestAnimationFrame(animate);
+    // -------------------------
+    // Main loop
+    // -------------------------
+    function tick(){
+        const now = performance.now();
 
         rotX += (targetRotX - rotX) * 0.08;
         rotY += (targetRotY - rotY) * 0.08;
 
-        if(autoRotate && !isDragging){
+        // ✅ AUTO ROTATE: alleen als user idle is
+        if (shouldAutoRotate(now)) {
             targetRotY += 0.0035;
         }
 
@@ -537,14 +648,24 @@
         camera.position.set(x,y,z);
         camera.lookAt(0,0,0);
 
+        updateLayoutPositions();
         renderer.render(scene, camera);
+
+        requestAnimationFrame(tick);
     }
-    animate();
+    requestAnimationFrame(tick);
 
     window.addEventListener("resize", ()=>{
         camera.aspect = innerWidth/innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(innerWidth, innerHeight);
+    });
+
+    console.log("✅ INIT DONE", {
+        total: TOTAL,
+        timeline: { TIMELINE_START_YEAR, TIMELINE_END_YEAR },
+        settings: { LIMIT, REQUIRE_DEBUT, ONLY_WITH_PHOTO, LAYOUT_RANDOMIZE_ON_INIT, LAYOUT_RANDOMIZE_ON_COUNT_CHANGE },
+        autoRotate: { AUTO_ROTATE_IDLE_RESUME_MS }
     });
 </script>
 </body>

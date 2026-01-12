@@ -182,3 +182,250 @@ canvas{display:block}
     .modalLeft{padding:24px 18px}
     .modalTitle{font-size:34px}
 }
+
+
+
+.filters{
+    position: fixed;
+    top: 18px;
+    left: 18px;
+    z-index: 50;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.78);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+}
+
+.filterLabel{
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 11px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #111;
+}
+
+.filterSelect{
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid rgba(0,0,0,0.12);
+    background: rgba(255,255,255,0.92);
+    padding: 0 10px;
+    font-size: 13px;
+    outline: none;
+}
+
+.filterBtn{
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(0,0,0,0.12);
+    background: rgba(255,255,255,0.92);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.filterBtn:hover{
+    background: rgba(255,255,255,1);
+}
+
+
+/* =========================
+   Timeline (Debuut slider)
+   ========================= */
+
+.timelineUI{
+    position: fixed;
+    top: 18px;
+    left: 18px;
+    z-index: 99999;
+
+    width: min(420px, calc(100vw - 36px));
+    padding: 12px 12px 10px;
+
+    border-radius: 16px;
+    background: rgba(255,255,255,.72);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+
+    border: 1px solid rgba(0,0,0,.08);
+    box-shadow: 0 14px 40px rgba(0,0,0,.10);
+
+    pointer-events: auto;
+}
+
+/* top row */
+.timelineTop{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.timelineLabel{
+    font-size: 12px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: rgba(0,0,0,.75);
+    user-select: none;
+}
+
+/* smaller pills for play/now */
+.pillSmall{
+    padding: 7px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+
+    background: rgba(255,255,255,.85);
+    border: 1px solid rgba(0,0,0,.10);
+    box-shadow: 0 10px 24px rgba(0,0,0,.08);
+
+    cursor: pointer;
+    transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+}
+
+.pillSmall:hover{
+    transform: translateY(-1px);
+    background: rgba(255,255,255,.95);
+    box-shadow: 0 14px 32px rgba(0,0,0,.10);
+}
+
+.pillSmall:active{
+    transform: translateY(0px);
+    box-shadow: 0 10px 24px rgba(0,0,0,.08);
+}
+
+/* range row */
+.timelineRow{
+    position: relative;
+    display:flex;
+    align-items:center;
+    gap: 10px;
+    padding: 6px 2px 2px;
+}
+
+/* the dot that follows slider */
+.timelineDot{
+    position:absolute;
+    top: 50%;
+    left: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+
+    /*background: rgba(0,0,0,.82);*/
+    box-shadow: 0 10px 24px rgba(0,0,0,.18);
+    opacity: .95;
+}
+
+/* slider base */
+#tlRange{
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    height: 10px;
+    border-radius: 999px;
+
+    background: linear-gradient(90deg,
+    rgba(0,0,0,.86) 0%,
+    rgba(0,0,0,.10) 55%,
+    rgba(0,0,0,.08) 100%
+    );
+
+    outline: none;
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+/* webkit track */
+#tlRange::-webkit-slider-runnable-track{
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(0,0,0,.08);
+}
+
+/* webkit thumb */
+#tlRange::-webkit-slider-thumb{
+    -webkit-appearance: none;
+    appearance: none;
+
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+
+    background: rgba(255,255,255,.98);
+    border: 1px solid rgba(0,0,0,.14);
+    box-shadow: 0 10px 24px rgba(0,0,0,.14);
+
+    margin-top: -4px; /* centers thumb on track */
+    transition: transform .12s ease;
+}
+
+#tlRange:active::-webkit-slider-thumb{
+    transform: scale(1.05);
+}
+
+/* firefox track */
+#tlRange::-moz-range-track{
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(0,0,0,.08);
+}
+
+/* firefox thumb */
+#tlRange::-moz-range-thumb{
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+
+    background: rgba(255,255,255,.98);
+    border: 1px solid rgba(0,0,0,.14);
+    box-shadow: 0 10px 24px rgba(0,0,0,.14);
+}
+
+/* dates row */
+.timelineDates{
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    gap: 10px;
+
+    margin-top: 8px;
+    padding: 0 2px;
+
+    font-size: 12px;
+    /*color: rgba(0,0,0,.60);*/
+    user-select:none;
+}
+
+.timelineDates span{
+    font-variant-numeric: tabular-nums;
+}
+
+/* optional: make it sit above your centered topTitle text */
+.topTitle{
+    z-index: 20;
+}
+
+/* responsive */
+@media (max-width: 520px){
+    .timelineUI{
+        top: 12px;
+        left: 12px;
+        border-radius: 14px;
+        padding: 10px 10px 9px;
+    }
+    .timelineLabel{ font-size: 11px; }
+    .pillSmall{ padding: 6px 9px; }
+}
