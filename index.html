@@ -6,7 +6,6 @@
     <title>Onze jongens van Oranje</title>
     <link rel="stylesheet" href="src/style.css">
 
-    <!-- ✅ Start-state IN de slider-div (niet fullscreen) -->
     <style>
         /* container bovenop de three canvas */
         #app{ position:relative; }
@@ -18,19 +17,18 @@
             z-index:50;
             display:grid;
             place-items:center;
-            pointer-events:auto;
+            pointer-events:auto; /* overlay vangt clicks */
         }
         .startPanel.hidden{ display:none; }
 
         .startPanel .startBg{
             position:absolute;
-            /*inset:0;*/
             width:75%;
             height:75%;
             object-fit:contain;
-            border-radius:16px; /* als je app een rounding heeft */
-            /*opacity:.92;*/
+            border-radius:16px;
             filter:saturate(1.05) contrast(1.05);
+            pointer-events:none; /* image zelf vangt geen events */
         }
 
         .startPanel .startInner{
@@ -42,6 +40,7 @@
             padding:18px 18px;
             text-align:center;
             max-width:520px;
+            pointer-events:none; /* alleen knop krijgt pointer-events */
         }
 
         .startPanel .startTitle{
@@ -54,6 +53,19 @@
             line-height:1.35;
             text-shadow:0 12px 30px rgba(0,0,0,.45);
             user-select:none;
+            pointer-events:none;
+        }
+
+        /* ✅ knop onderin het scherm (binnen overlay) */
+        .startBtnWrap{
+            position:absolute;
+            left:0;
+            right:0;
+            bottom:18px;
+            display:flex;
+            justify-content:center;
+            pointer-events:auto;
+            z-index:60;
         }
 
         .startBtn{
@@ -67,6 +79,7 @@
             letter-spacing:.06em;
             box-shadow:0 14px 40px rgba(0,0,0,.35);
             transform:translateZ(0);
+            pointer-events:auto;
         }
         .startBtn:active{ transform:scale(.98); }
 
@@ -91,39 +104,43 @@
 <div id="app">
     <!-- ✅ Start state overlay IN de app-div -->
     <div class="startPanel" id="startPanel" aria-hidden="false">
-        <!-- placeholder image (zet zelf neer) -->
         <img class="startBg" id="startBg" src="/public/team.jpg" alt="Start placeholder" />
         <div class="startInner">
-            <div class="startTitle">Onze jongens van Oranje</div>
+<!--            <div class="startTitle">Onze jongens van Oranje</div>-->
+        </div>
+
+        <!-- ✅ knop onderin -->
+        <div class="startBtnWrap">
             <button class="startBtn" id="btnStart" type="button">START EXPERIENCE</button>
         </div>
     </div>
 </div>
 
 <div class="bottomNav uiHidden" id="bottomNav">
-    <button class="pill" id="btnReset">RESET VIEW</button>
-    <button class="pill" id="btnShuffle">SHUFFLE</button>
-    <button class="pill" id="btnAuto">AUTO ROTATE</button>
+    <div class=" " id="timelineUI">
+        <div class="timelineTop">
+            <div class="timelineLabel" id="tlLabel">Gekozen jaar: –</div>
+        </div>
+
+        <div class="timelineRow">
+            <input id="tlRange" type="range" min="0" max="2000" step="1" value="0" />
+            <div class="timelineDot" id="tlDot"></div>
+        </div>
+
+        <div class="timelineDates">
+            <span id="tlMin">–</span>
+            <span id="tlMid">–</span>
+            <span id="tlMax">–</span>
+        </div>
+    </div>
+    <button class="pil uiHidden" id="btnReset" style="display:none;">RESET VIEW</button>
+    <button class="pill uiHidden" id="btnShuffle" style="display:none;">SHUFFLE</button>
+    <button class="pill uiHidden" id="btnAuto" style="display:none;">AUTO ROTATE</button>
 </div>
 
 <div class="tip" id="tip"></div>
 
-<div class="timelineUI uiHidden" id="timelineUI">
-    <div class="timelineTop">
-        <div class="timelineLabel" id="tlLabel">Gekozen jaar: –</div>
-    </div>
-
-    <div class="timelineRow">
-        <input id="tlRange" type="range" min="0" max="2000" step="1" value="0" />
-        <div class="timelineDot" id="tlDot"></div>
-    </div>
-
-    <div class="timelineDates">
-        <span id="tlMin">–</span>
-        <span id="tlMid">–</span>
-        <span id="tlMax">–</span>
-    </div>
-</div>
+<div class="slider"></div>
 
 <script type="module">
     console.log("✅ SCRIPT START");
@@ -153,7 +170,6 @@
 
     let experienceStarted = false;
 
-    // ✅ globe image die je al hebt
     const GLOBE_START_IMAGE = "/public/team.jpg";
 
     function showUI(){
@@ -167,24 +183,21 @@
         timelineUIEl?.classList.remove("show");
     }
 
-    // init: UI hidden
     hideUI();
 
     btnStart.addEventListener("click", async () => {
         if (experienceStarted) return;
+
+        // ✅ vanaf NU pas interactie toestaan
         experienceStarted = true;
 
-        // 1) placeholder -> globe image (in dezelfde panel)
         if (startBg) startBg.src = GLOBE_START_IMAGE;
-
-        // kleine delay zodat je "switch" ziet
         await new Promise(r => setTimeout(r, 160));
 
-        // 2) panel weg + UI aan
         startPanel?.classList.add("hidden");
         showUI();
 
-        // 3) meteen auto-rotate kunnen laten starten (zonder wachten)
+        // auto rotate direct
         lastUserActivityTs = performance.now() - AUTO_ROTATE_IDLE_RESUME_MS - 1;
 
         console.log("🚀 EXPERIENCE STARTED");
@@ -192,27 +205,18 @@
     // ============================================================
 
     // ============================================================
-    // ✅ INSTELLINGEN (zoals LIMIT)
+    // ✅ INSTELLINGEN
     // ============================================================
-    const LIMIT = null;                   // bv 200, of null = alles
-    const REQUIRE_DEBUT = true;           // true aanbevolen (timeline)
-    const ONLY_WITH_PHOTO = false;        // true = alleen foto, false = fallback
+    const LIMIT = null;
+    const REQUIRE_DEBUT = true;
+    const ONLY_WITH_PHOTO = false;
 
-    // ✅ RANDOM LAYOUT (zonder random timeline!)
     const LAYOUT_RANDOMIZE_ON_INIT = true;
-    const LAYOUT_RANDOMIZE_ON_COUNT_CHANGE = false; // true = elke keer als activeCount verandert
-    // ============================================================
+    const LAYOUT_RANDOMIZE_ON_COUNT_CHANGE = false;
 
-    // ============================================================
-    // ✅ TIMELINE VASTE JAREN
-    // ============================================================
     const TIMELINE_START_YEAR = 1905;
     const TIMELINE_END_YEAR   = 2025;
-    // ============================================================
 
-    // ============================================================
-    // ✅ AUTO SPACING / SCALE (800 spelers)
-    // ============================================================
     const CARD_W = 1.5;
     const CARD_H = 2.3;
 
@@ -227,11 +231,7 @@
 
     const ZOOM_MIN = 1;
     const ZOOM_MAX = 915;
-    // ============================================================
 
-    // ============================================================
-    // ✅ AUTO-ROTATE STOPPEN OP MOUSEMOVE + RESUME NA IDLE
-    // ============================================================
     const AUTO_ROTATE_IDLE_RESUME_MS = 1800;
     let autoRotateUserEnabled = true;
     let lastUserActivityTs = performance.now();
@@ -274,7 +274,6 @@
 
     function getImgUrl(p, w = 1100){
         let src = String(p?.img || "").trim();
-
         if (!src) return `${GITHUB_RAW_BASE}/img/players/fallback.jpg`;
 
         src = src.replace(/^\/?public\//, "");
@@ -338,13 +337,6 @@
         return ya - yb;
     });
 
-    if (typeof LIMIT === "number" && Number.isFinite(LIMIT) && LIMIT > 0) {
-        usedPlayers = usedPlayers.slice(0, LIMIT);
-        console.log("✂️ LIMIT applied:", LIMIT);
-    } else {
-        console.log("✂️ LIMIT disabled (null)");
-    }
-
     console.log("✅ usedPlayers final:", usedPlayers.length);
 
     // -------------------------
@@ -404,6 +396,7 @@
     let lastX = 0, lastY = 0;
 
     renderer.domElement.addEventListener("pointerdown", (e)=>{
+        if (!experienceStarted) return;   // ✅ geen interactie vóór start
         registerUserActivity("pointerdown");
         isDragging = true;
         lastX = e.clientX; lastY = e.clientY;
@@ -411,6 +404,7 @@
     });
 
     renderer.domElement.addEventListener("pointermove", (e)=>{
+        if (!experienceStarted) return;   // ✅ geen interactie vóór start
         registerUserActivity("drag-move");
         if(!isDragging) return;
         const dx = e.clientX - lastX;
@@ -423,11 +417,13 @@
     });
 
     renderer.domElement.addEventListener("pointerup", ()=>{
+        if (!experienceStarted) return;   // ✅ geen interactie vóór start
         registerUserActivity("pointerup");
         isDragging = false;
     });
 
     window.addEventListener("wheel", (e)=>{
+        if (!experienceStarted) return;   // ✅ geen interactie vóór start
         registerUserActivity("wheel");
         const delta = Math.sign(e.deltaY);
         zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom + delta * 1.1));
@@ -480,8 +476,6 @@
     const cards = [];
     const TOTAL = usedPlayers.length;
 
-    console.log("🧱 creating meshes:", TOTAL);
-
     for (let i = 0; i < TOTAL; i++){
         const p = usedPlayers[i];
 
@@ -494,7 +488,6 @@
         });
 
         const url = getImgUrl(p, 1100);
-        if (i < 3) console.log("🖼️ texture url:", i, p.name, url);
 
         texLoader.load(
             url,
@@ -522,10 +515,8 @@
         cards.push(mesh);
     }
 
-    console.log("✅ meshes created:", cards.length);
-
     // -------------------------
-    // Tooltip + hover (RAYCAST)
+    // Tooltip + hover (✅ niet door foto heen)
     // -------------------------
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
@@ -540,6 +531,61 @@
             tip.innerHTML = html;
         }
     }
+
+    function setMouseFromEvent(e){
+        const rect = renderer.domElement.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
+        mouse.x = x * 2 - 1;
+        mouse.y = -(y * 2 - 1);
+    }
+
+    renderer.domElement.addEventListener("pointermove", (e)=>{
+        if (!experienceStarted) {
+            // ✅ zolang start overlay er is: nooit hover, nooit tooltip
+            if (hovered) hovered.scale.setScalar(hovered.userData.__baseScale || 1);
+            hovered = null;
+            setTip(false);
+            return;
+        }
+
+        setMouseFromEvent(e);
+        raycaster.setFromCamera(mouse, camera);
+
+        const visibleCards = cards.slice(0, activeCount);
+        const hits = raycaster.intersectObjects(visibleCards, true);
+        const hit = hits.length ? hits[0].object : null;
+
+        if(hit && hit.userData?.name){
+            if(hovered !== hit){
+                if(hovered) hovered.scale.setScalar(hovered.userData.__baseScale || 1);
+                hovered = hit;
+
+                const base = hovered.userData.__baseScale || 1;
+                hovered.scale.setScalar(base * HOVER_BOOST);
+            }
+
+            const p = hit.userData;
+            const dy = yearFromDate(p.debut);
+            setTip(true, e.clientX, e.clientY,
+                `<b>${p.name}</b>
+         <div style="font-size:11px;color:#555;margin-top:4px">
+           ${p.country || "–"} • ${p.club || "–"}<br>
+           Debuut: <b>${dy ?? "–"}</b>
+         </div>`
+            );
+        } else {
+            if(hovered) hovered.scale.setScalar(hovered.userData.__baseScale || 1);
+            hovered = null;
+            setTip(false);
+        }
+    });
+
+    renderer.domElement.addEventListener("pointerleave", ()=>{
+        if(hovered) hovered.scale.setScalar(hovered.userData.__baseScale || 1);
+        hovered = null;
+        setTip(false);
+    });
 
     // -------------------------
     // Timeline fixed years 1905–2025
@@ -564,7 +610,6 @@
     let activeCount = 0;
     let targetRadius = MIN_RADIUS;
     let spherePoints = [];
-
     let layoutOrder = [];
 
     function setDotFromRange(){
@@ -646,14 +691,6 @@
             setTip(false);
 
             zoom = Math.max(zoom, targetRadius + 8);
-
-            console.log("🟠 ACTIVE CHANGED:", {
-                chosenYear,
-                activeCount,
-                radius: targetRadius.toFixed(2),
-                baseScale: baseS.toFixed(3),
-                layoutRandom: LAYOUT_RANDOMIZE_ON_COUNT_CHANGE
-            });
         }
     }
 
@@ -668,43 +705,8 @@
         }
     }
 
-    // hover uses activeCount
-    window.addEventListener("pointermove", (e)=>{
-        mouse.x = (e.clientX / innerWidth) * 2 - 1;
-        mouse.y = -(e.clientY / innerHeight) * 2 + 1;
-
-        raycaster.setFromCamera(mouse, camera);
-
-        const visibleCards = cards.slice(0, activeCount);
-        const hits = raycaster.intersectObjects(visibleCards, true);
-        const hit = hits.length ? hits[0].object : null;
-
-        if(hit && hit.userData?.name){
-            if(hovered !== hit){
-                if(hovered) hovered.scale.setScalar(hovered.userData.__baseScale || 1);
-                hovered = hit;
-
-                const base = hovered.userData.__baseScale || 1;
-                hovered.scale.setScalar(base * HOVER_BOOST);
-            }
-
-            const p = hit.userData;
-            const dy = yearFromDate(p.debut);
-            setTip(true, e.clientX, e.clientY,
-                `<b>${p.name}</b>
-         <div style="font-size:11px;color:#555;margin-top:4px">
-           ${p.country || "–"} • ${p.club || "–"}<br>
-           Debuut: <b>${dy ?? "–"}</b>
-         </div>`
-            );
-        } else {
-            if(hovered) hovered.scale.setScalar(hovered.userData.__baseScale || 1);
-            hovered = null;
-            setTip(false);
-        }
-    });
-
     tlRange.addEventListener("input", ()=>{
+        if (!experienceStarted) return; // ✅ timeline pas na start
         registerUserActivity("timeline");
         setYearFromSlider();
         rebuildLayoutIfNeeded();
@@ -716,37 +718,14 @@
     layoutOrder = [];
     rebuildLayoutIfNeeded();
 
-    // -------------------------
-    // Buttons
-    // -------------------------
-    document.getElementById("btnReset").addEventListener("click", ()=>{
-        registerUserActivity("reset");
-        targetRotX = 0; targetRotY = 0; zoom = 22;
-    });
-
-    document.getElementById("btnShuffle").addEventListener("click", ()=>{
-        registerUserActivity("shuffle");
-        if (activeCount <= 1) return;
-        randomizeLayoutOrder(activeCount);
-    });
-
-    document.getElementById("btnAuto").addEventListener("click", ()=>{
-        registerUserActivity("auto-toggle");
-        autoRotateUserEnabled = !autoRotateUserEnabled;
-        if (autoRotateUserEnabled) lastUserActivityTs = performance.now() - AUTO_ROTATE_IDLE_RESUME_MS - 1;
-        document.getElementById("btnAuto").textContent = autoRotateUserEnabled ? "AUTO ROTATE" : "AUTO OFF";
-    });
-
-    // -------------------------
     // Main loop
-    // -------------------------
     function tick(){
         const now = performance.now();
 
         rotX += (targetRotX - rotX) * 0.08;
         rotY += (targetRotY - rotY) * 0.08;
 
-        if (shouldAutoRotate(now)) targetRotY += 0.0035;
+        if (experienceStarted && shouldAutoRotate(now)) targetRotY += 0.0035;
 
         const r = zoom;
         const x = r * Math.sin(rotY) * Math.cos(rotX);

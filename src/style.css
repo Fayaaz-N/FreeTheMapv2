@@ -268,6 +268,9 @@ canvas{display:block}
     gap: 10px;
     margin-bottom: 10px;
 }
+div#timelineUI {
+    width: 500px;
+}
 
 .timelineLabel{
     font-size: 12px;
