@@ -234,7 +234,50 @@ canvas{display:block}
 .filterBtn:hover{
     background: rgba(255,255,255,1);
 }
+.startBtnWrap{
+    position:absolute;
+    left:0;
+    right:0;
+    bottom:10em;!important
+    display:flex;
+    justify-content:center;
+    pointer-events:auto;
+    z-index:60;
+}
+.tlPlayBtn{
+    width:38px;
+    height:38px;
+    border-radius:999px;
+    border:0;
+    cursor:pointer;
+    background:#fff;
+    color:#111;
+    font-weight:800;
+    box-shadow:0 10px 26px rgba(0,0,0,.18);
+    display:grid;
+    place-items:center;
+    user-select:none;
+}
+.tlPlayBtn:active{ transform:scale(.98); }
+.tlPlayBtn.isPlaying{
+    background:#111;
+    color:#fff;
+}
 
+.startBtn{
+    border:0;
+    padding:12px 18px;
+    border-radius:999px;
+    cursor:pointer;
+    background:orange;!important
+    color:white;!important
+    font-size:18px;!important
+    font-weight:500;!important
+    letter-spacing:.06em;
+    box-shadow:0 14px 40px rgba(0,0,0,.35);
+    transform:translateZ(0);
+    pointer-events:auto;
+}
 
 /* =========================
    Timeline (Debuut slider)

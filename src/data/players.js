@@ -3640,7 +3640,7 @@ export const players = [
         role:"Aanvaller",
         club:"FC Den Haag",
         country:"China",
-        img:"https://i.pinimg.com/1200x/ec/50/b0/ec50b0d7e5376e7b0207ed29d2abb89c.jpg",
+        img:"https://www.ad.nl/regiosport-den-haag/tscheu-la-ling-zal-er-niet-wakker-van-liggen-dat-hij-65-interlands-meer-had-kunnen-spelen~ad3225c1/9023701/",
         imgCredit:"",
         clubSource:"https://www.transfermarkt.com/tscheu-la-ling/profil/spieler/149002",
         story:"",
