@@ -1438,6 +1438,24 @@ function tick() {
     requestAnimationFrame(tick);
 }
 requestAnimationFrame(tick);
+   const openColofon = document.getElementById("openColofon");
+const closeColofon = document.getElementById("closeColofon");
+const colofonOverlay = document.getElementById("colofonOverlay");
+
+openColofon.addEventListener("click", () => {
+  colofonOverlay.classList.add("show");
+});
+
+closeColofon.addEventListener("click", () => {
+  colofonOverlay.classList.remove("show");
+});
+
+/* ESC sluiten */
+window.addEventListener("keydown", (e) => {
+  if(e.key === "Escape"){
+    colofonOverlay.classList.remove("show");
+  }
+});
 
 window.addEventListener("resize", () => {
     camera.aspect = innerWidth / innerHeight;
