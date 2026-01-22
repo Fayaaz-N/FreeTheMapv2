@@ -244,20 +244,7 @@ canvas{display:block}
     pointer-events:auto;
     z-index:60;
 }
-.tlPlayBtn{
-    width:38px;
-    height:38px;
-    border-radius:999px;
-    border:0;
-    cursor:pointer;
-    background:#fff;
-    color:#111;
-    font-weight:800;
-    box-shadow:0 10px 26px rgba(0,0,0,.18);
-    display:grid;
-    place-items:center;
-    user-select:none;
-}
+
 .tlPlayBtn:active{ transform:scale(.98); }
 .tlPlayBtn.isPlaying{
     background:#111;

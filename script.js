@@ -5,9 +5,9 @@
     window.addEventListener("unhandledrejection", (e) => console.log("❌ unhandledrejection:", e?.reason, e));
 
     import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-    import { players } from "../../../../../../Downloads/FreeTheMapv2-main/src/data/players.js";
-    import localMap from "../../../../../../Downloads/FreeTheMapv2-main/src/data/players_local_map.json" with { type: "json" };
-    import countryCentroids from "../../../../../../Downloads/FreeTheMapv2-main/src/data/players_country_centroids.json" with { type: "json" };
+    import { players } from "./src/data/players.js";
+    import localMap from "./src/data/players_local_map.json" with { type: "json" };
+    import countryCentroids from "./src/data/players_country_centroids.json" with { type: "json" };
 
     console.log("✅ imports ok:", {
         playersLen: players?.length,
