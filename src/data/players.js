@@ -584,7 +584,7 @@ export const players = [
         role:"Middenvelder",
         club:"Chelsea",
         country:"Suriname",
-        img:"https://i.pinimg.com/736x/ed/1b/76/ed1b7619997a1a95d86c9d2ab68a80a0.jpg",
+        img:"/img/ruud-gullit.webp",
         imgCredit:"",
         clubSource:"https://www.transfermarkt.com/ruud-gullit/profil/spieler/101045",
         story:"",

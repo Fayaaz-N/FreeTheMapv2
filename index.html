@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <title>Onze jongens van Oranje</title>
     <link rel="icon" type="image/x-icon" href="/public/favicon.png">
-
     <link rel="stylesheet" href="./src/styles.css">
     <link rel="stylesheet" href="./src/style.css">
 </head>
@@ -21,29 +20,25 @@
 
 <div class="topTitle uiHidden" id="topTitle">Onze jongens van Oranje<br>JOEP • IVY • FAYAAZ</div>
 
-<!-- ✅ Alles gebeurt in #app.. -->
+<!-- ✅ Alles gebeurt in #app -->
 <div id="app">
-    <!-- ✅ Start state overlay IN de app-div -->
     <div class="startPanel" id="startPanel" aria-hidden="false">
         <img class="startBg" id="startBg" src="public/team.jpg" alt="Start placeholder" />
-     <div class="startInner centerIntro">
-    <h1 class="introTitle">Onze jongens van Oranje</h1>
-    <p class="introSubtitle">
-        Een visuele geschiedenis van beweging,<br>
-        afkomst en verbondenheid
-    </p>
-</div>
+        <div class="startInner centerIntro">
+            <h1 class="introTitle">Onze jongens van Oranje</h1>
+            <p class="introSubtitle">
+                Een visuele geschiedenis van beweging,<br>
+                afkomst en verbondenheid
+            </p>
+        </div>
 
-
-<button class="introArrow" id="btnNext" aria-label="Next screen">→</button>
-
+        <button class="introArrow" id="btnNext" aria-label="Next screen">→ <br> Ga verder</button>
     </div>
 </div>
 
-    <div class="guidedWrapper">
-
-    <!-- LEFT: Guided tour -->
-    <aside class="guidedTour">
+<!-- ✅ Guided tour blijft los bestaan -->
+<div class="guidedWrapper" id="guidedWrapper">
+    <aside class="guidedTour" id="guidedTour">
         <div class="guidedHeader">
             <h2>Guided tour</h2>
             <span class="stepCounter" id="gtStep">1 / 5</span>
@@ -52,49 +47,46 @@
         <div class="guidedCard" id="gtContent">
             <h3>💡 Free The Map</h3>
             <p>
-               Nederland is geen vaste plek op de kaart. Deze visual laat zien hoe het Nederlands elftal wordt gevormd door beweging, afkomst en verbinding.
-Spelers komen van verschillende plekken, maar vormen samen één geheel.
+                Nederland is geen vaste plek op de kaart. Deze visual laat zien hoe het Nederlands elftal wordt gevormd door beweging, afkomst en verbinding.
+                Spelers komen van verschillende plekken, maar vormen samen één geheel.
             </p>
         </div>
 
         <button class="guidedNext" id="gtNext">Next</button>
     </aside>
-
-    <!-- RIGHT: Context panel (pop-out speler / jaar) -->
-    <aside class="contextPanel" id="contextPanel">
-        <h3 id="contextTitle">1905</h3>
-        <p id="contextText">
-            In dit jaar speelt Nederland zijn eerste officiële interland.
-            Het elftal bestaat nog volledig uit spelers geboren in Nederland.
-        </p>
-    </aside>
-
 </div>
 
+<!-- ✅ Context panel staat NU buiten guidedWrapper (verdwijnt dus niet) -->
+<aside class="contextPanel" id="contextPanel" style="display:none;">
+    <h3 id="contextTitle">1905</h3>
+    <p id="contextText">
+        In dit jaar speelt Nederland zijn eerste officiële interland.
+        Het elftal bestaat nog volledig uit spelers geboren in Nederland.
+    </p>
+</aside>
+
 <div class="bottomNav uiHidden" id="bottomNav">
-    <div class=" " id="timelineUI">
+    <div id="timelineUI">
         <div class="timelineTop">
             <div class="timelineLabel" id="tlLabel">Gekozen jaar: –</div>
         </div>
 
-        <!-- ✅ timeline + play knop -->
-       <div class="timelineRow tlRowFlex">
-    <div class="timelineColumn">
-        <div class="tlWrap">
-            <input id="tlRange" type="range" />
-            <div class="timelineDot" id="tlDot"></div>
+        <div class="timelineRow tlRowFlex">
+            <div class="timelineColumn">
+                <div class="tlWrap">
+                    <input id="tlRange" type="range" />
+                    <div class="timelineDot" id="tlDot"></div>
+                </div>
+
+                <div class="timelineDates">
+                    <span id="tlMin">–</span>
+                    <span id="tlMid">–</span>
+                    <span id="tlMax">–</span>
+                </div>
+            </div>
+
+            <button class="tlPlayBtn" id="tlPlayBtn">▶</button>
         </div>
-
-        <div class="timelineDates">
-            <span id="tlMin">–</span>
-            <span id="tlMid">–</span>
-            <span id="tlMax">–</span>
-        </div>
-    </div>
-
-    <button class="tlPlayBtn" id="tlPlayBtn">▶</button>
-</div>
-
     </div>
 
     <button class="pil uiHidden" id="btnReset" style="display:none;">RESET VIEW</button>
@@ -102,10 +94,8 @@ Spelers komen van verschillende plekken, maar vormen samen één geheel.
     <button class="pill uiHidden" id="btnAuto" style="display:none;">AUTO ROTATE</button>
 </div>
 
-
 <div class="tip" id="tip"></div>
 <div class="slider"></div>
-
 
 <script type="module" src="./script.js"></script>
 </body>
