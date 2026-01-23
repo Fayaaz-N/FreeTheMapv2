@@ -1,4 +1,73 @@
 console.log("✅ SCRIPT START");
+function pickBestDutchVoice() {
+    const voices = speechSynthesis.getVoices() || [];
+
+    // Kandidaten die vaak "beter" klinken (verschilt per OS/browser)
+    const preferred = [
+        "Microsoft Maarten",
+        "Microsoft Xander",
+        "Google Nederlands",
+        "Google Dutch",
+        "nl-NL"
+    ];
+
+    // 1) Exacte match op bekende namen
+    for (const key of preferred) {
+        const v = voices.find(v =>
+            (v.name && v.name.toLowerCase().includes(key.toLowerCase())) ||
+            (v.lang && v.lang.toLowerCase() === key.toLowerCase())
+        );
+        if (v) return v;
+    }
+
+    // 2) Pak gewoon de eerste NL voice
+    return voices.find(v => (v.lang || "").toLowerCase().startsWith("nl")) || null;
+}
+
+function speakDutch(text) {
+    if (!text || !text.trim()) return;
+
+    speechSynthesis.cancel();
+
+    const u = new SpeechSynthesisUtterance(text.trim());
+    u.lang = "nl-NL";
+
+    // Klinkt vaak natuurlijker met iets lagere pitch + iets rustiger tempo
+    u.rate = 0.95;
+    u.pitch = 0.95;
+
+    const voice = pickBestDutchVoice();
+    if (voice) u.voice = voice;
+
+    speechSynthesis.speak(u);
+}
+
+// Belangrijk: in sommige browsers laden voices later
+speechSynthesis.onvoiceschanged = () => {
+    // noop; zorgt dat getVoices() gevuld wordt
+};
+
+document.addEventListener("click", (e) => {
+    const playBtn = e.target.closest(".tts-btn");
+    const stopBtn = e.target.closest(".tts-stop");
+
+    // STOP heeft voorrang
+    if (stopBtn) {
+        speechSynthesis.cancel();
+        return;
+    }
+
+    // PLAY
+    if (!playBtn) return;
+
+    const panel = document.getElementById("contextPanel");
+    const textEl = document.getElementById("contextText");
+
+    speakDutch(textEl?.innerText || panel?.innerText || "");
+});
+
+
+speechSynthesis.getVoices().map(v => ({ name: v.name, lang: v.lang }));
 
 window.addEventListener("error", (e) => console.log("❌ window.error:", e?.message, e));
 window.addEventListener("unhandledrejection", (e) => console.log("❌ unhandledrejection:", e?.reason, e));
@@ -43,6 +112,8 @@ btnNext?.addEventListener("click", async () => {
 
     lastUserActivityTs = performance.now();
 });
+
+
 
 const btnStart = document.getElementById("btnStart");
 const startBg = document.getElementById("startBg");
@@ -113,8 +184,8 @@ const COUNTRY_RELAX_ITERS = 34;
 const FLAG_OFFSET_OUTWARD = 1.05;
 const FLAG_SIZE = 1.05;
 
-// autoplay
-const TL_UNITS_PER_SEC = 12;
+// autoplay tijd aanpassen
+const TL_UNITS_PER_SEC = 17;
 const TL_LOOP = false;
 
 const AUTO_ROTATE_IDLE_RESUME_MS = 1800;
@@ -549,12 +620,11 @@ const stories = new Map([
     [1905, {
         year: 1905,
         title: "1905 — Het begin van het Nederlands elftal",
-        text:
-            `In 1905 speelt Nederland zijn eerste officiële interland tegen België. Het elftal bestaat uit amateurspelers van clubs uit Nederlandse steden en is sterk verbonden aan een stedelijke elite. Voetbal is geen beroep, maar wordt gespeeld naast werk of studie.
+        text: `In 1905 speelt Nederland zijn eerste officiële interland tegen België. Het elftal bestaat uit amateurspelers uit Nederlandse steden, voor wie voetbal geen beroep is maar een bijzaak naast werk of studie.
 
-Binnen deze eerste selectie bevinden zich Eddy de Neve en Dolph Kessler, beiden geboren in Nederlands-Indië en sportief gevormd in Nederland. Door hun juridische status als Nederlanders kunnen zij voor Oranje uitkomen. Hun deelname laat zien dat het Nederlands elftal vanaf het begin verbonden is met het koloniale rijk, al blijft die verbinding beperkt tot enkele individuen.
+Binnen deze eerste selectie bevinden zich Eddy de Neve en Dolph Kessler, beiden geboren in Nederlands-Indië. Door hun juridische status kunnen zij voor Oranje uitkomen.
 
-Het elftal van 1905 laat vooral een beperkt sociaal en cultureel beeld van Nederland zien. Selectie werd bepaald door toegang tot clubs en netwerken binnen Nederland, waardoor de bredere geografische en koloniale werkelijkheid van het koninkrijk nauwelijks werd vertegenwoordigd.`,
+Hun deelname laat zien dat het Nederlands elftal vanaf het begin verbonden is met het koloniale rijk, al blijft die verbinding nog beperkt.`,
         players: [
             "Eddy de Neve",
             "Dolph Kessler"
@@ -570,10 +640,11 @@ Het elftal van 1905 laat vooral een beperkt sociaal en cultureel beeld van Neder
     [1912, {
         year: 1912,
         title: "1912 — Nationale selectie buiten het rijk",
-        text:
-            `In 1912 maakt Joop Boutmy zijn debuut voor het Nederlands elftal. Hij is geboren in Penang (het huidige Maleisië), een gebied dat buiten zowel Nederland als het Nederlandse koloniale rijk ligt. Door zijn Nederlandse afkomst en opvoeding in Nederland is hij speelgerechtigd voor Oranje.
+        text: `In 1912 maakt Joop Boutmy zijn debuut voor het Nederlands elftal. Hij is geboren in Penang, het huidige Maleisië, een gebied buiten Nederland en het koloniale rijk.
 
-Het debuut van Boutmy laat zien dat nationale vertegenwoordiging in het vroege Nederlands elftal niet uitsluitend werd bepaald door geboorteplaats of koloniale grenzen. Juridische status, opvoeding en toegang tot Nederlandse sportstructuren waren doorslaggevend. Daarmee wordt zichtbaar dat Oranje al vroeg verbonden was met een wereld buiten het eigen rijk.`,
+Zijn debuut laat zien dat nationale vertegenwoordiging niet alleen werd bepaald door geboorteplaats. Afkomst, opvoeding en toegang tot Nederlandse clubs waren doorslaggevend.
+
+Oranje blijkt al vroeg verbonden met een wereld buiten de eigen grenzen.`,
         players: [
             "Joop Boutmy"
         ],
@@ -582,41 +653,28 @@ Het debuut van Boutmy laat zien dat nationale vertegenwoordiging in het vroege N
         ]
     }],
 
-    // Let op: jouw verhaal geeft 6 april 1945 als datum,
-    // maar het “jaar moment” in de timeline is 1945.
-
-
     [1954, {
         year: 1954,
-        title: "1954 — Van elitaire amateursport naar professioneel voetbal",
-        text:
-            `Tot 1954 is voetbal in Nederland een amateursport. Spelers spelen naast hun werk of studie en komen vooral via bestaande clubs en sociale kringen in beeld, die vaak worden gedomineerd door de hogere middenklasse. Wie toegang heeft tot deze netwerken, maakt meer kans om door te groeien naar het hoogste niveau.
+        title: "1954 — Van amateur naar prof",
+        text: `Tot 1954 is voetbal in Nederland een amateursport. Spelers komen vooral in beeld via clubs en sociale netwerken, die sterk samenhangen met status en achtergrond.
 
-Met de invoering van het betaald voetbal verandert dit. Clubs worden professioneler en spelers kunnen zich volledig richten op voetbal. Hierdoor wordt de weg naar het Nederlands elftal minder afhankelijk van sociale achtergrond en sociale status, en meer van wat spelers laten zien op het veld.
+Met de invoering van betaald voetbal verandert dit. Clubs worden professioneler en spelers kunnen zich volledig richten op voetbal.
 
-De invoering van het professionele voetbal maakt het Nederlandse voetbal opener en legt de basis voor veranderingen in de samenstelling van Oranje in de jaren daarna.`,
+De weg naar Oranje wordt daarmee opener en meer gebaseerd op talent.`,
         players: [],
         sources: [
             "https://nl.wikipedia.org/wiki/Betaald_voetbal_in_Nederland"
         ]
     }],
 
-    // Jij had eerst 1958 genoemd, maar je verhaal is 1960 (Mijnals debuut).
-    // Als jij 1958 als trigger wil houden: zet story key op 1958 in plaats van 1960.
     [1960, {
         year: 1960,
         title: "1960 — Het debuut van Humphrey Mijnals",
-        text:
-            `Op 3 april 1960 debuteert Humphrey Mijnals voor het Nederlands elftal in een thuiswedstrijd tegen Bulgarije. Hij is geboren in Suriname, dat op dat moment nog deel uitmaakt van het Koninkrijk der Nederlanden. Met zijn debuut wordt voor het eerst een speler met Surinaamse achtergrond zichtbaar onderdeel van Oranje.
-                   
-                   
-                   
-                   
-                   
-                   
-                   
-                   
-Het debuut van Mijnals markeert een belangrijk moment in de ontwikkeling van het Nederlands elftal. Dankzij de professionalisering van het voetbal en een veranderende samenleving ontstaat ruimte voor spelers met een andere herkomst. Tegelijk blijft zijn aanwezigheid nog uitzonderlijk: diversiteit is zichtbaar geworden, maar nog niet structureel.`,
+        text: `Op 3 april 1960 debuteert Humphrey Mijnals voor het Nederlands elftal. Hij is geboren in Suriname, dat op dat moment deel uitmaakt van het Koninkrijk der Nederlanden.
+
+Met zijn debuut wordt voor het eerst een speler met Surinaamse achtergrond zichtbaar onderdeel van Oranje.
+
+Diversiteit blijft nog uitzonderlijk, maar een verandering is ingezet.`,
         players: [
             "Humphrey Mijnals"
         ],
@@ -628,12 +686,11 @@ Het debuut van Mijnals markeert een belangrijk moment in de ontwikkeling van het
     [1975, {
         year: 1975,
         title: "1975 — Onafhankelijkheid van Suriname",
-        text:
-            `In 1975 wordt Suriname onafhankelijk van Nederland. In de jaren rond deze onafhankelijkheid verhuizen veel Surinaamse families naar Nederland. Hun kinderen groeien op in Nederlandse steden en worden onderdeel van het Nederlandse voetbal, vaak vanaf jonge leeftijd.
+        text: `In 1975 wordt Suriname onafhankelijk van Nederland. In deze periode verhuizen veel Surinaamse families naar Nederland.
 
-Dit moment is belangrijk voor het Nederlands elftal omdat het structurele gevolgen heeft. Waar spelers met Surinaamse achtergrond in 1960 nog uitzonderingen zijn, ontstaat na 1975 een bredere basis van talent. De invloed van Suriname op Oranje wordt daarmee niet langer incidenteel, maar generatiegebonden.
+Hun kinderen groeien op in Nederlandse steden en vinden hun weg naar het voetbal. Hierdoor ontstaat een bredere basis van talent voor Oranje.
 
-1975 vormt zo een maatschappelijk kantelpunt dat de samenstelling van het Nederlands elftal blijvend verandert, ook al wordt dit pas in de jaren daarna volledig zichtbaar.`,
+De invloed van Suriname wordt structureel en generatiegebonden.`,
         players: [],
         sources: [
             "https://nl.wikipedia.org/wiki/Onafhankelijkheid_van_Suriname"
@@ -643,14 +700,13 @@ Dit moment is belangrijk voor het Nederlands elftal omdat het structurele gevolg
     [1988, {
         year: 1988,
         title: "1988 — Succes maakt verandering zichtbaar",
-        text:
-            `In 1988 bereikt de ontwikkeling die in 1981 zichtbaar werd een nieuw hoogtepunt. Het Nederlands elftal wint het Europees kampioenschap met een team waarin spelers met verschillende achtergronden samenkomen. Naast Ruud Gullit spelen ook Frank Rijkaard en Marco van Basten een belangrijke rol.
+        text: `In 1988 wint Nederland het Europees kampioenschap. Het elftal bestaat uit spelers met verschillende achtergronden die samen succesvol zijn.
 
-De sportieve overwinning zorgt ervoor dat wat eerder nog als verandering werd gezien, nu breed wordt geaccepteerd. Het elftal wordt nationaal omarmd en gepresenteerd als “onze jongens van Oranje”. Achtergronden verdwijnen naar de achtergrond; samenwerking en succes komen centraal te staan.
+De overwinning zorgt ervoor dat deze verandering breed wordt geaccepteerd. Oranje wordt nationaal omarmd als “onze jongens van Oranje”.
 
-1988 laat zien dat het Nederlands elftal niet alleen sportief succesvol is, maar ook een symbool wordt van een Nederland dat zich heeft ontwikkeld tot een samenleving waarin verschillende verhalen samen een nieuw geheel vormen.`,
+Samenwerking en succes komen centraal te staan.`,
         players: [
-            "Marco van Basten",
+            "Ruud Gullit"
         ],
         sources: [
             "https://nl.wikipedia.org/wiki/Europees_kampioenschap_voetbal_1988"
@@ -660,10 +716,11 @@ De sportieve overwinning zorgt ervoor dat wat eerder nog als verandering werd ge
     [2010, {
         year: 2010,
         title: "2010 — Oranje verbindt",
-        text:
-            `De WK-selectie van 2010 laat zien hoe breed de herkomst van Nederlandse internationals is geworden. Naast spelers met wortels in Suriname en Indonesië maken nu ook spelers met familiebanden in Noord-Afrika deel uit van het team. Khalid Boulahrouz, met Marokkaanse achtergrond, is hiervan een duidelijk voorbeeld.
-<br>
-Met spelers als Giovanni van Bronckhorst en Nigel de Jong weerspiegelt het Nederlands elftal in 2010 een brede Nederlandse samenleving. Het behalen van de WK-finale onderstreept dat het succes van Oranje voortkomt uit de gezamenlijke inzet van spelers met diverse achtergronden.`,
+        text: `In 2010 laat het Nederlands elftal zien hoe breed de herkomst van internationals is geworden. Spelers hebben wortels in onder meer Suriname, Indonesië en Noord-Afrika.
+
+Met het bereiken van de WK-finale wordt duidelijk dat succes voortkomt uit samenwerking.
+
+Verschillende achtergronden vormen samen één team.`,
         players: [
             "Nigel de Jong"
         ],
@@ -676,16 +733,16 @@ Met spelers als Giovanni van Bronckhorst en Nigel de Jong weerspiegelt het Neder
     [2025, {
         year: 2025,
         title: "2025 — Oranje zonder grenzen",
-        text:
-            `Als we kijken naar het heden, wordt duidelijk hoe sterk het Nederlands elftal is veranderd. Van de laatste twintig spelers die hun debuut maakten voor Oranje, zouden twaalf in theorie ook voor een ander land kunnen uitkomen dan Nederland. Deze spelers zijn verbonden met zeven verschillende landen, waaronder Italië, Nigeria, Togo, Curaçao en Aruba. Dit laat zien dat het Nederlands elftal tegenwoordig wordt gevormd door een netwerk van internationale verbindingen.
+        text: `In het heden is het Nederlands elftal sterk veranderd. Veel spelers die debuteren voor Oranje hebben ook banden met andere landen.
 
-Dit vormt een scherp contrast met het begin van Oranje in 1905. In die periode bestond het elftal uit spelers die in Nederland waren geboren en gevormd, of juridisch Nederlands waren via het koloniale rijk, zoals Nederlands-Indië. Nationale identiteit in het voetbal was toen nauw verbonden aan geografische grenzen en staatsverbanden.`,
+Dit contrasteert met 1905, toen het elftal vooral bestond uit spelers uit Nederland of het koloniale rijk.
+
+Oranje is uitgegroeid tot een netwerk van internationale verbindingen.`,
         players: [],
-        sources: [
-            // (Je noemde “laatste 20 debutanten” maar nog geen bronlink; kan je later toevoegen)
-        ]
+        sources: []
     }]
 ]);
+
 
 // 2) OPTIONAL: als jij per se “1958” als trigger wil (ipv 1960), doe dit 1x:
 // if (!stories.has(1958) && stories.has(1960)) {
@@ -1464,4 +1521,5 @@ window.addEventListener("resize", () => {
 });
 
 console.log("✅ INIT DONE");
+
 
