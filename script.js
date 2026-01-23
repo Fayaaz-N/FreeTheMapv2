@@ -152,7 +152,7 @@ const REQUIRE_DEBUT = true;
 const ONLY_WITH_PHOTO = false;
 
 const TIMELINE_START_YEAR = 1905;
-const TIMELINE_END_YEAR = 2025;
+const TIMELINE_END_YEAR = 2026;
 
 const CARD_W = 1.5;
 const CARD_H = 2.3;
@@ -337,7 +337,6 @@ function computeCardBaseScale(n) {
     return Math.max(MIN_CARD_SCALE, Math.min(MAX_CARD_SCALE, s));
 }
 
-// ✅ push anchors apart on sphere
 function relaxCountryAnchors(anchorByKey, keys, fixedKey) {
     if (keys.length < 2) return;
 
